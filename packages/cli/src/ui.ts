@@ -19,22 +19,21 @@ export const c = {
   gray: wrap(90, 39),
 };
 
-// Small anchor. Hand-tuned monospace. Renders ~7 lines tall.
+// Big block-letter ANCHOR. ANSI Shadow style.
+// Each line is a separate string so the TUI can render it row-by-row.
+export const BIG_BANNER_LINES = [
+  " █████╗ ███╗   ██╗ ██████╗██╗  ██╗ ██████╗ ██████╗",
+  "██╔══██╗████╗  ██║██╔════╝██║  ██║██╔═══██╗██╔══██╗",
+  "███████║██╔██╗ ██║██║     ███████║██║   ██║██████╔╝",
+  "██╔══██║██║╚██╗██║██║     ██╔══██║██║   ██║██╔══██╗",
+  "██║  ██║██║ ╚████║╚██████╗██║  ██║╚██████╔╝██║  ██║",
+  "╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝",
+];
+
 export function banner(): string {
-  const a = c.cyan;
-  const d = c.dim;
-  const b = c.bold;
-  const lines = [
-    a("       _"),
-    a("      ( )"),
-    a("       H"),
-    a("      _H_"),
-    a("   .-'-.-'-."),
-    a("  /         \\"),
-    a("  '---------'"),
-  ];
-  const title = `${b(c.cyan("Anchor"))}  ${d("· cross-agent memory")}`;
-  return lines.join("\n") + "\n" + title + "\n";
+  const colored = BIG_BANNER_LINES.map((l) => c.cyan(l)).join("\n");
+  const tagline = c.dim("cross-agent memory");
+  return `${colored}\n${tagline}\n`;
 }
 
 export function kv(key: string, value: string): string {
@@ -42,7 +41,7 @@ export function kv(key: string, value: string): string {
 }
 
 export function ok(msg: string): string {
-  return `${c.green("✓")} ${msg}`;
+  return `${c.green("ok")} ${msg}`;
 }
 
 export function warn(msg: string): string {
@@ -50,5 +49,5 @@ export function warn(msg: string): string {
 }
 
 export function err(msg: string): string {
-  return `${c.red("✗")} ${msg}`;
+  return `${c.red("x")} ${msg}`;
 }

@@ -11,11 +11,14 @@ export interface CompressOptions {
   query: string;
 }
 
-const TYPE_PRIORITY: Record<MemoryRow["type"], number> = {
-  fact: 0,
-  decision: 1,
-  artifact: 2,
-  episode: 3,
+// Type weights bias relevance scoring rather than hard-overriding it.
+// Higher = more important. Multiplied against (1 / (rank position + 1)) of the
+// caller-supplied row order so BM25-strong matches still win over type priority.
+const TYPE_WEIGHT: Record<MemoryRow["type"], number> = {
+  fact: 1.4,
+  decision: 1.3,
+  artifact: 1.0,
+  episode: 0.9,
 };
 
 /**
@@ -37,11 +40,18 @@ const TYPE_PRIORITY: Record<MemoryRow["type"], number> = {
  *   _Sources: N items from M sessions_
  */
 export function compressToGist(rows: MemoryRow[], opts: CompressOptions): string {
-  const ranked = [...rows].sort((a, b) => {
-    const tp = TYPE_PRIORITY[a.type] - TYPE_PRIORITY[b.type];
-    if (tp !== 0) return tp;
-    return b.updatedAt - a.updatedAt;
-  });
+  // Caller passes rows already ordered by relevance (BM25). Convert to a
+  // descending-relevance score, multiply by type weight, then sort.
+  const scored = rows.map((r, i) => ({
+    row: r,
+    score: (1 / (i + 1)) * TYPE_WEIGHT[r.type],
+  }));
+  const ranked = scored
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.row.updatedAt - a.row.updatedAt;
+    })
+    .map((s) => s.row);
 
   const sections: Record<MemoryRow["type"], string[]> = {
     fact: [],

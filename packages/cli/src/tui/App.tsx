@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Box, Text, useApp, useInput, Static } from "ink";
 import TextInput from "ink-text-input";
 import type { Store, MemoryRow, MemoryType } from "@anchormem/server/store/db";
+import { BIG_BANNER_LINES } from "../ui.js";
 
 interface Props {
   store: Store;
@@ -183,6 +184,14 @@ export function App({ store, initialScope }: Props) {
 
   return (
     <Box flexDirection="column">
+      {/* Big banner */}
+      <Box flexDirection="column" paddingX={1} marginBottom={1}>
+        {BIG_BANNER_LINES.map((line, i) => (
+          <Text key={i} color="cyan">{line}</Text>
+        ))}
+        <Text dimColor>cross-agent memory</Text>
+      </Box>
+
       {/* Header */}
       <Box
         borderStyle="round"
@@ -192,19 +201,16 @@ export function App({ store, initialScope }: Props) {
         justifyContent="space-between"
       >
         <Box>
-          <Text bold color="cyan">Anchor</Text>
-          <Text dimColor>  cross-agent memory</Text>
+          <Text dimColor>scope </Text>
+          <Text bold>{scope}</Text>
         </Box>
         <Box>
-          <Text dimColor>scope </Text>
-          <Text>{scope}</Text>
-          <Text dimColor>   </Text>
           <Text color="green">f {stats.fact}</Text>
-          <Text dimColor> </Text>
+          <Text dimColor>  </Text>
           <Text color="magenta">d {stats.decision}</Text>
-          <Text dimColor> </Text>
+          <Text dimColor>  </Text>
           <Text color="blue">e {stats.episode}</Text>
-          <Text dimColor> </Text>
+          <Text dimColor>  </Text>
           <Text color="yellow">a {stats.artifact}</Text>
         </Box>
       </Box>

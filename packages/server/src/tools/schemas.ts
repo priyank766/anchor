@@ -2,17 +2,25 @@ import { z } from "zod";
 
 export const MemoryTypeSchema = z.enum(["fact", "decision", "episode", "artifact"]);
 
-export const RememberInput = z.object({
-  type: MemoryTypeSchema,
-  content: z.string().min(1).max(8000),
-  rationale: z.string().max(4000).optional(),
-  ref: z.string().max(500).optional(),
-  note: z.string().max(2000).optional(),
-  files: z.array(z.string()).max(20).optional(),
-  scope: z.string().optional(),
-  agent: z.string().default("unknown"),
-  sessionId: z.string().optional(),
-});
+export const RememberInput = z
+  .object({
+    type: MemoryTypeSchema,
+    content: z.string().min(1).max(8000).optional(),
+    rationale: z.string().max(4000).optional(),
+    ref: z.string().max(500).optional(),
+    note: z.string().max(2000).optional(),
+    files: z.array(z.string()).max(20).optional(),
+    scope: z.string().optional(),
+    agent: z.string().default("unknown"),
+    sessionId: z.string().optional(),
+  })
+  .refine(
+    (v) => (v.type === "artifact" ? !!v.ref : !!v.content),
+    {
+      message:
+        "content is required for fact/decision/episode; ref is required for artifact",
+    }
+  );
 
 export const RecallInput = z.object({
   query: z.string().min(1).max(2000),

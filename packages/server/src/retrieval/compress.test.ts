@@ -33,15 +33,39 @@ describe("compressToGist", () => {
     expect(estimateTokens(out)).toBeLessThanOrEqual(220);
   });
 
-  it("orders facts before decisions before episodes", () => {
+  it("biases toward facts/decisions when relevance is comparable", () => {
+    // All rows enter at the same input position 0 (caller passes them ranked).
+    // With near-equal relevance, type weights should bring fact/decision up.
     const rows: MemoryRow[] = [
-      row({ id: "e", type: "episode", content: "EPISODE_TEXT" }),
-      row({ id: "d", type: "decision", content: "DECISION_TEXT", rationale: "because" }),
       row({ id: "f", type: "fact", content: "FACT_TEXT" }),
+      row({ id: "d", type: "decision", content: "DECISION_TEXT", rationale: "because" }),
+      row({ id: "e", type: "episode", content: "EPISODE_TEXT" }),
     ];
     const out = compressToGist(rows, { budgetTokens: 1500, query: "x" });
-    expect(out.indexOf("FACT_TEXT")).toBeLessThan(out.indexOf("DECISION_TEXT"));
-    expect(out.indexOf("DECISION_TEXT")).toBeLessThan(out.indexOf("EPISODE_TEXT"));
+    expect(out.indexOf("FACT_TEXT")).toBeLessThan(out.indexOf("EPISODE_TEXT"));
+  });
+
+  it("orders within a section by relevance (caller's input order * type weight)", () => {
+    // Two episodes — episode A passed in first (more relevant per BM25), B second.
+    // A should appear before B inside the episode section.
+    const rows: MemoryRow[] = [
+      row({ id: "a", type: "episode", content: "EPISODE_A_STRONG" }),
+      row({ id: "b", type: "episode", content: "EPISODE_B_WEAK" }),
+    ];
+    const out = compressToGist(rows, { budgetTokens: 1500, query: "x" });
+    expect(out.indexOf("EPISODE_A_STRONG")).toBeLessThan(out.indexOf("EPISODE_B_WEAK"));
+  });
+
+  it("under budget pressure, drops weak-relevance items first regardless of type", () => {
+    // Budget fits only ~2 short lines. The first-passed item (highest score)
+    // wins, even if it's an episode (lowest type weight).
+    const rows: MemoryRow[] = [
+      row({ id: "ep", type: "episode", content: "TOP_EPISODE" }),
+      row({ id: "f1", type: "fact", content: "x".repeat(2000) }),
+      row({ id: "f2", type: "fact", content: "y".repeat(2000) }),
+    ];
+    const out = compressToGist(rows, { budgetTokens: 80, query: "x" });
+    expect(out).toContain("TOP_EPISODE");
   });
 
   it("includes provenance footer", () => {

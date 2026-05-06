@@ -6,7 +6,8 @@ import { hostname } from "node:os";
 export function handleRemember(store: Store, raw: unknown) {
   const input = RememberInput.parse(raw);
 
-  const { text: safeContent, redacted } = redact(input.content);
+  const sourceContent = input.content ?? input.ref ?? "";
+  const { text: safeContent, redacted } = redact(sourceContent);
   const safeRationale = input.rationale ? redact(input.rationale).text : undefined;
   const safeNote = input.note ? redact(input.note).text : undefined;
   const safeRef = input.ref ? redact(input.ref).text : undefined;
