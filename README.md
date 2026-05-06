@@ -33,7 +33,7 @@ The moat isn't storage. It's **compressed, query-time retrieval** — the new ag
 
 ---
 
-## ✨ Why Anchor?
+##  Why Anchor?
 
 | Without Anchor | With Anchor |
 |---|---|
