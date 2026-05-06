@@ -1,0 +1,16 @@
+{
+  "name": "@anchormem/anchor",
+  "version": "0.0.1",
+  "description": "Anchor — cross-agent memory. Meta-package: installs the CLI and MCP server.",
+  "type": "module",
+  "bin": {
+    "anchor": "bin/anchor.js",
+    "anchor-server": "bin/anchor-server.js"
+  },
+  "dependencies": {
+    "@anchormem/cli": "*",
+    "@anchormem/server": "*"
+  },
+  "files": ["bin", "README.md"],
+  "license": "MIT"
+}

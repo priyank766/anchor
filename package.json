@@ -1,0 +1,20 @@
+{
+  "name": "anchor",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Cross-agent memory layer. Local-first MCP server + open Skill so any agent (Claude Code, Codex, Cursor, Cline, Gemini CLI, ...) shares context.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

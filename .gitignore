@@ -1,0 +1,33 @@
+node_modules/
+dist/
+*.log
+*.tsbuildinfo
+coverage/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local data
+.anchor-local/
+.openmem-local/
+
+# Claude Code workspace files (personal settings, hooks, transcripts)
+.claude/
+.claude.json
+.claude.json.backup
+
+# Internal-only assistant docs (not for the public repo)
+CLAUDE.md
+
+# Internal docs / plans / strategy — keep private
+docs/
+
+# IDE
+.vscode/
+.idea/

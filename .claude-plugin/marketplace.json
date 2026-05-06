@@ -1,0 +1,13 @@
+{
+  "name": "anchormem",
+  "title": "Anchor",
+  "description": "Cross-agent persistent memory. Local-first.",
+  "version": "0.0.1",
+  "skills": [
+    {
+      "name": "anchor",
+      "path": "packages/skill",
+      "description": "Recall and persist context across agents via the Anchor MCP server."
+    }
+  ]
+}

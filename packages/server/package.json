@@ -1,0 +1,38 @@
+{
+  "name": "@anchormem/server",
+  "version": "0.0.1",
+  "description": "Anchor MCP server — local-first cross-agent memory.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "anchor-server": "dist/index.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./config": "./dist/config.js",
+    "./store/db": "./dist/store/db.js",
+    "./tools/list": "./dist/tools/list.js",
+    "./tools/recall": "./dist/tools/recall.js",
+    "./tools/remember": "./dist/tools/remember.js",
+    "./tools/forget": "./dist/tools/forget.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "better-sqlite3": "^11.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  },
+  "files": ["dist", "README.md"]
+}
