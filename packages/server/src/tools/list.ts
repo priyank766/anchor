@@ -1,9 +1,10 @@
 import type { Store } from "../store/db.js";
 import { ListInput } from "./schemas.js";
+import { resolveDefaultScope } from "../scope.js";
 
 export function handleList(store: Store, raw: unknown) {
   const input = ListInput.parse(raw);
-  const scope = store.resolveScope(input.scope);
+  const scope = store.resolveScope(resolveDefaultScope(input.scope));
   const rows = store.listByScope(scope.id, input.type, input.limit ?? 100);
   return {
     scope: scope.name,

@@ -62,7 +62,20 @@ export class Store {
 
   // --- Sources ------------------------------------------------------------
 
+  // Reuse an existing row for (agent, sessionId, deviceId) — otherwise we'd
+  // create a fresh source per remember() call and the provenance footer
+  // would lie ("N items from N sessions").
   recordSource(s: Omit<Source, "id">): string {
+    const sessionKey = s.sessionId ?? "";
+    const existing = this.db
+      .prepare(
+        `SELECT id FROM sources
+         WHERE agent = ? AND COALESCE(session_id, '') = ? AND device_id = ?
+         LIMIT 1`
+      )
+      .get(s.agent, sessionKey, s.deviceId) as { id: string } | undefined;
+    if (existing) return existing.id;
+
     const id = randomUUID();
     this.db
       .prepare(
@@ -245,9 +258,169 @@ export class Store {
     return out;
   }
 
+  // --- Export / import ---------------------------------------------------
+
+  exportAll(scopeId?: string): ExportPayload {
+    const scopeFilter = scopeId ? "WHERE scope_id = ?" : "";
+    const params = scopeId ? [scopeId] : [];
+    const facts = this.db
+      .prepare(`SELECT * FROM facts ${scopeFilter}`)
+      .all(...params);
+    const decisions = this.db
+      .prepare(`SELECT * FROM decisions ${scopeFilter}`)
+      .all(...params);
+    const episodes = this.db
+      .prepare(`SELECT * FROM episodes ${scopeFilter}`)
+      .all(...params);
+    const artifacts = this.db
+      .prepare(`SELECT * FROM artifacts ${scopeFilter}`)
+      .all(...params);
+    const scopes = scopeId
+      ? this.db.prepare("SELECT * FROM scopes WHERE id = ?").all(scopeId)
+      : this.db.prepare("SELECT * FROM scopes").all();
+    const sources = this.db.prepare("SELECT * FROM sources").all();
+    return {
+      version: 1,
+      exportedAt: Date.now(),
+      scopes: scopes as ScopeRow[],
+      sources: sources as SourceRow[],
+      facts: facts as RawRow[],
+      decisions: decisions as RawRow[],
+      episodes: episodes as RawRow[],
+      artifacts: artifacts as RawRow[],
+    };
+  }
+
+  // Insert-or-ignore by id. Round-trip safe: re-importing the same payload
+  // is a no-op rather than a duplicate.
+  importPayload(payload: ExportPayload): { imported: number; skipped: number } {
+    let imported = 0;
+    let skipped = 0;
+
+    const insertOrIgnore = (
+      table: string,
+      columns: string[],
+      row: Record<string, unknown>
+    ) => {
+      const placeholders = columns.map(() => "?").join(", ");
+      const stmt = this.db.prepare(
+        `INSERT OR IGNORE INTO ${table} (${columns.join(", ")}) VALUES (${placeholders})`
+      );
+      const values = columns.map((c) => row[c] ?? null);
+      const r = stmt.run(...values);
+      if (r.changes > 0) imported++;
+      else skipped++;
+    };
+
+    const tx = this.db.transaction(() => {
+      for (const s of payload.scopes ?? []) {
+        insertOrIgnore("scopes", ["id", "path", "name", "created_at"], s as unknown as Record<string, unknown>);
+      }
+      for (const s of payload.sources ?? []) {
+        insertOrIgnore(
+          "sources",
+          ["id", "agent", "session_id", "device_id", "created_at"],
+          s as unknown as Record<string, unknown>
+        );
+      }
+      for (const r of payload.facts ?? []) {
+        insertOrIgnore(
+          "facts",
+          [
+            "id",
+            "scope_id",
+            "source_id",
+            "content",
+            "superseded_by",
+            "created_at",
+            "updated_at",
+            "last_verified_at",
+          ],
+          r
+        );
+      }
+      for (const r of payload.decisions ?? []) {
+        insertOrIgnore(
+          "decisions",
+          [
+            "id",
+            "scope_id",
+            "source_id",
+            "content",
+            "rationale",
+            "superseded_by",
+            "created_at",
+            "updated_at",
+            "last_verified_at",
+          ],
+          r
+        );
+      }
+      for (const r of payload.episodes ?? []) {
+        insertOrIgnore(
+          "episodes",
+          [
+            "id",
+            "scope_id",
+            "source_id",
+            "summary",
+            "files",
+            "salience",
+            "created_at",
+            "updated_at",
+          ],
+          r
+        );
+      }
+      for (const r of payload.artifacts ?? []) {
+        insertOrIgnore(
+          "artifacts",
+          [
+            "id",
+            "scope_id",
+            "source_id",
+            "ref",
+            "note",
+            "created_at",
+            "updated_at",
+          ],
+          r
+        );
+      }
+    });
+    tx();
+    return { imported, skipped };
+  }
+
   close() {
     this.db.close();
   }
+}
+
+interface ScopeRow {
+  id: string;
+  path: string | null;
+  name: string;
+  created_at: number;
+}
+interface SourceRow {
+  id: string;
+  agent: string;
+  session_id: string | null;
+  device_id: string;
+  created_at: number;
+}
+type RawRow = Record<string, unknown>;
+
+export interface ExportPayload {
+  version: 1;
+  exportedAt: number;
+  scopes: ScopeRow[];
+  sources: SourceRow[];
+  facts: RawRow[];
+  decisions: RawRow[];
+  episodes: RawRow[];
+  artifacts: RawRow[];
 }
 
 function rowToMemory(type: MemoryType, r: Record<string, unknown>): MemoryRow {

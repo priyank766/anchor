@@ -2,6 +2,7 @@ import type { Store } from "../store/db.js";
 import { redact } from "../capture/redact.js";
 import { RememberInput } from "./schemas.js";
 import { hostname } from "node:os";
+import { resolveDefaultScope } from "../scope.js";
 
 export function handleRemember(store: Store, raw: unknown) {
   const input = RememberInput.parse(raw);
@@ -12,7 +13,7 @@ export function handleRemember(store: Store, raw: unknown) {
   const safeNote = input.note ? redact(input.note).text : undefined;
   const safeRef = input.ref ? redact(input.ref).text : undefined;
 
-  const scope = store.resolveScope(input.scope);
+  const scope = store.resolveScope(resolveDefaultScope(input.scope));
   const sourceId = store.recordSource({
     agent: input.agent,
     sessionId: input.sessionId,
