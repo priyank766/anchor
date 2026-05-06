@@ -42,7 +42,7 @@ The moat isn't storage. It's **compressed, query-time retrieval** — the new ag
 | Agent dumps full transcripts → context bloats | Agent gets a 1500-token gist of *this* task |
 | Need vendor accounts / API keys | Local SQLite file. No accounts. |
 
-## 🚀 Install
+##  Install
 
 ```bash
 # Quickest — try it
@@ -96,7 +96,7 @@ command = "anchor-server"
 Each accepts an MCP server config. Use `command: anchor-server`. PRs welcome with tested snippets — see [CONTRIBUTING.md](CONTRIBUTING.md).
 </details>
 
-## 🧠 How it works
+##  How it works
 
 1. **Recall at task start.** Your agent calls `memory_recall(query)` and gets a token-budgeted markdown gist — facts, decisions with rationale, recent episode summaries, file pointers. ~1500 tokens, not a transcript.
 
@@ -127,7 +127,7 @@ anchor path         Print the DB path
 
 The TUI ships with search (`/`), navigation (`↑↓`/`jk`), expand (`enter`), forget (`d`), quit (`q`).
 
-## 🛡️ What gets redacted before storage
+##  What gets redacted before storage
 
 - OpenAI / Anthropic / Google / Stripe / Slack / GitHub keys
 - AWS access key IDs and secret access keys
@@ -155,7 +155,7 @@ PRs welcome. We're especially looking for:
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide and what we will / won't merge.
 
-## ❓ FAQ
+##  FAQ
 
 **Is this an agent?** No. Anchor doesn't generate, plan, or act. It remembers. Your agent does the work.
 
@@ -167,7 +167,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide and what we will / won
 
 **Why is the moat compression?** Storage is a commodity (SQLite). The hard part is turning a year of conversations into the right 1500 tokens for *this* task. That's the engineering.
 
-## 📜 License
+##  License
 
 [MIT](LICENSE)
 
