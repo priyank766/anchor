@@ -1,14 +1,3 @@
-<div align="center">
-
-```
-       _
-      ( )
-       H
-      _H_
-   .-'-.-'-.
-  /         \
-  '---------'
-```
 
 # Anchor
 
@@ -55,7 +44,7 @@ npx skills add priyank766/anchor
 pip install anchormem
 ```
 
-## 🔌 Connect your agent
+##  Connect your agent
 
 Anchor speaks MCP. Every modern agent has its own way to register an MCP server. Pick yours:
 
@@ -115,7 +104,7 @@ Each accepts an MCP server config. Use `command: anchor-server`. PRs welcome wit
 
 5. **Local-only.** One SQLite file at `~/.anchor/memory.db`. You own it. Export/import any time. Optional cloud sync later.
 
-## 🖥️ CLI
+##  CLI
 
 ```
 anchor              Open the interactive memory browser (TUI)
@@ -137,14 +126,14 @@ The TUI ships with search (`/`), navigation (`↑↓`/`jk`), expand (`enter`), f
 
 If you find a leak path, please email instead of filing a public issue. See [CONTRIBUTING.md](CONTRIBUTING.md#security).
 
-## 🗺️ Roadmap
+##  Roadmap
 
 - **Phase 0** *(now)* — skeleton: SQLite store, BM25 retrieval, four MCP tools, CLI + TUI, secret redaction, the open Skill
 - **Phase 1** — token-budgeted compression, optional embeddings (Ollama / OpenAI), per-agent capture hooks, the *cold-vs-warm* benchmark
 - **Phase 2** — `pip install anchormem`, single static binary, Homebrew tap, marketing site
 - **Phase 3** — opt-in E2E-encrypted cloud sync (multi-device)
 
-## 🤝 Contributing
+##  Contributing
 
 PRs welcome. We're especially looking for:
 
