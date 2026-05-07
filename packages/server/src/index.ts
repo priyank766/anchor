@@ -11,6 +11,7 @@ import { handleRemember } from "./tools/remember.js";
 import { handleRecall } from "./tools/recall.js";
 import { handleForget } from "./tools/forget.js";
 import { handleList } from "./tools/list.js";
+import { handleSupersede } from "./tools/supersede.js";
 
 const TOOLS = [
   {
@@ -74,6 +75,23 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "memory_supersede",
+    description:
+      "Replace a stale fact or decision. Marks the old row as superseded and inserts a new one with the same type. Use this instead of remembering a conflicting fact, so recall gets the current version cleanly.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        oldId: { type: "string", description: "id of the fact/decision being replaced" },
+        content: { type: "string" },
+        rationale: { type: "string", description: "Recommended for decisions." },
+        scope: { type: "string" },
+        agent: { type: "string" },
+        sessionId: { type: "string" },
+      },
+      required: ["oldId", "content"],
+    },
+  },
 ];
 
 async function main() {
@@ -103,6 +121,9 @@ async function main() {
           break;
         case "memory_list":
           result = handleList(store, args ?? {});
+          break;
+        case "memory_supersede":
+          result = handleSupersede(store, args ?? {});
           break;
         default:
           throw new Error(`Unknown tool: ${name}`);

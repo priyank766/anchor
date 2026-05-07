@@ -19,6 +19,7 @@ ${c.bold("Usage")}
   ${c.cyan("anchor export")} [--scope X]    Print the entire memory store as JSON
   ${c.cyan("anchor import")} <file>         Merge a JSON export into the local store
   ${c.cyan("anchor doctor")}                Run diagnostics (db, scope, redaction)
+  ${c.cyan("anchor hook")} <event>          Claude Code hook adapter (internal)
   ${c.cyan("anchor path")}                  Print the DB file path
   ${c.cyan("anchor help")}
 
@@ -125,6 +126,16 @@ async function main() {
 
     case "doctor": {
       runDoctor(cfg);
+      return;
+    }
+
+    case "hook": {
+      if (rest.length === 0) {
+        process.stderr.write(err("usage: anchor hook <agent> <event>  (agent ∈ claude-code|gemini|codex|opencode|hermes|generic)\n"));
+        process.exit(1);
+      }
+      const { runHook } = await import("./hook.js");
+      await runHook(rest);
       return;
     }
 

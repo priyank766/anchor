@@ -12,6 +12,7 @@
     "./config": "./dist/config.js",
     "./scope": "./dist/scope.js",
     "./capture/redact": "./dist/capture/redact.js",
+    "./retrieval/compress": "./dist/retrieval/compress.js",
     "./store/db": "./dist/store/db.js",
     "./tools/list": "./dist/tools/list.js",
     "./tools/recall": "./dist/tools/recall.js",

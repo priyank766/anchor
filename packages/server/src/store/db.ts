@@ -172,6 +172,49 @@ export class Store {
     return false;
   }
 
+  // --- Supersession -------------------------------------------------------
+
+  // Marks an existing row as superseded by a new id. Returns the type of the
+  // old row (so the caller can insert a new row of the same type) or null if
+  // no row was found. Only `facts` and `decisions` track supersession; for
+  // episodes/artifacts the schema doesn't carry the column and supersession
+  // doesn't make semantic sense — caller should `deleteById` + `insert*`.
+  markSuperseded(oldId: string, newId: string): "fact" | "decision" | null {
+    const fr = this.db
+      .prepare("UPDATE facts SET superseded_by = ?, updated_at = ? WHERE id = ?")
+      .run(newId, Date.now(), oldId);
+    if (fr.changes > 0) return "fact";
+    const dr = this.db
+      .prepare("UPDATE decisions SET superseded_by = ?, updated_at = ? WHERE id = ?")
+      .run(newId, Date.now(), oldId);
+    if (dr.changes > 0) return "decision";
+    return null;
+  }
+
+  // Returns the row a given id was superseded by, walking the chain.
+  // Useful for "what's the current version of X".
+  resolveSupersedeChain(id: string): string {
+    let current = id;
+    for (let i = 0; i < 32; i++) {
+      const f = this.db
+        .prepare("SELECT superseded_by FROM facts WHERE id = ?")
+        .get(current) as { superseded_by: string | null } | undefined;
+      if (f?.superseded_by) {
+        current = f.superseded_by;
+        continue;
+      }
+      const d = this.db
+        .prepare("SELECT superseded_by FROM decisions WHERE id = ?")
+        .get(current) as { superseded_by: string | null } | undefined;
+      if (d?.superseded_by) {
+        current = d.superseded_by;
+        continue;
+      }
+      return current;
+    }
+    return current;
+  }
+
   // --- Reads --------------------------------------------------------------
 
   listByScope(scopeId: string, type?: MemoryType, limit = 100): MemoryRow[] {
