@@ -39,6 +39,7 @@ No accounts. No API keys. One SQLite file at `~/.anchor/memory.db`.
 - [Security](#security)
 - [Architecture](#architecture)
 - [Development](#development)
+- [Auto-load on session start (hooks)](#auto-load-on-session-start-hooks)
 - [Status](#status)
 - [License](#license)
 
@@ -96,6 +97,60 @@ command = "anchor-server"
 ### Cline, Continue.dev, Windsurf, OpenCode, Zed
 
 Each accepts an MCP server entry. Use `command: anchor-server` and refer to the host's MCP documentation for the configuration file location.
+
+---
+
+## Auto-load on session start (hooks)
+
+The MCP tools require the agent to *call* `memory_recall` at the right moment. The hook adapter avoids that: it injects prior project memory into the agent's context the moment a session starts. No tool call required.
+
+The adapter is `anchor hook <agent> <event>`. It reads optional JSON from stdin (the host's hook payload), figures out the project scope from `cwd` (git root), retrieves the most recent in-scope memory under a 1,500-token budget, and emits output in the format the host expects.
+
+| Agent | Output format | Behavior |
+|---|---|---|
+| `claude-code` | JSON: `{ hookSpecificOutput.additionalContext }` | Injected into the agent's system context. |
+| `gemini`, `codex`, `opencode`, `hermes`, `generic` | Plain text | Pipe into the agent's startup `--system` flag, stdin, or context-loader convention. |
+
+If the project scope has no memories, the hook emits nothing — Anchor never wastes the agent's context budget.
+
+### Claude Code
+
+```jsonc
+// ~/.claude/settings.json
+{
+  "hooks": {
+    "SessionStart": [
+      { "command": "anchor hook claude-code session-start" }
+    ]
+  }
+}
+```
+
+Verify with `anchor doctor` — it probes `~/.claude.json` and reports whether the entry is present.
+
+### Gemini CLI / Codex / OpenCode / Hermes
+
+Each tool has a way to load a system prompt at startup. Use the plain-text output:
+
+```bash
+# Generic shell pattern
+anchor hook generic session-start <<< "{}" > /tmp/anchor-context.txt
+gemini --system "$(cat /tmp/anchor-context.txt)"          # Gemini CLI
+codex --system-file /tmp/anchor-context.txt               # Codex (illustrative)
+opencode --context /tmp/anchor-context.txt                # OpenCode (illustrative)
+```
+
+The exact flag varies per agent; the contract is "Anchor produces the system-prompt fragment, you pipe it in." Empty when there is nothing to inject, so the wrapper never harms a fresh project.
+
+### Manual / shell-script integration
+
+For any agent not listed above, treat the `generic` flavor as the universal interface:
+
+```bash
+echo '{"cwd":"'"$PWD"'"}' | anchor hook generic session-start
+```
+
+This is the same contract Anchor itself follows internally — every agent flavor is a small formatter on top of it.
 
 ---
 

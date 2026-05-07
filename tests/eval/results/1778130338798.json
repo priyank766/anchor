@@ -1,0 +1,23 @@
+{
+  "ranAt": "2026-05-07T05:05:38.798Z",
+  "results": [
+    {
+      "id": "auth-rate-limiting",
+      "title": "Adding rate limiting to /auth/* endpoints",
+      "coldTokens": 9400,
+      "warmTokens": 224,
+      "reduction": "97.6%",
+      "hitRate": "5/5",
+      "missing": []
+    },
+    {
+      "id": "stripe-billing",
+      "title": "Migrating billing to Stripe Checkout",
+      "coldTokens": 7800,
+      "warmTokens": 163,
+      "reduction": "97.9%",
+      "hitRate": "3/3",
+      "missing": []
+    }
+  ]
+}
