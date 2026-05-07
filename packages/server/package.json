@@ -17,7 +17,8 @@
     "./tools/list": "./dist/tools/list.js",
     "./tools/recall": "./dist/tools/recall.js",
     "./tools/remember": "./dist/tools/remember.js",
-    "./tools/forget": "./dist/tools/forget.js"
+    "./tools/forget": "./dist/tools/forget.js",
+    "./tools/supersede": "./dist/tools/supersede.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

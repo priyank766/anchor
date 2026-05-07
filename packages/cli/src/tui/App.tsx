@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Box, Text, useApp, useInput, Static } from "ink";
 import TextInput from "ink-text-input";
 import type { Store, MemoryRow, MemoryType } from "@anchormem/server/store/db";
+import { handleSupersede } from "@anchormem/server/tools/supersede";
 import { BIG_BANNER_LINES } from "../ui.js";
 
 interface Props {
@@ -81,6 +82,7 @@ export function App({ store, initialScope }: Props) {
             "  <text>                       recall (default)",
             "  /recall <query>              same",
             "  /remember <type> <text>      type ∈ fact|decision|episode|artifact",
+            "  /supersede <id> <text>       replace a stale fact/decision",
             "  /forget <id>                 delete by id",
             "  /list [type]                 list memories in this scope",
             "  /scope <name>                switch scope",
@@ -124,6 +126,28 @@ export function App({ store, initialScope }: Props) {
         }
         handleForget(arg);
         return;
+      case "supersede": {
+        const m = arg.match(/^(\S+)\s+(.+)$/s);
+        if (!m) {
+          push("error", "usage: /supersede <id> <new content>");
+          return;
+        }
+        try {
+          const out = handleSupersede(store, {
+            oldId: m[1]!,
+            content: m[2]!,
+            scope,
+            agent: "anchor-tui",
+          });
+          push(
+            "info",
+            `superseded ${out.oldId.slice(0, 8)} → ${out.newId.slice(0, 8)} (${out.type})`
+          );
+        } catch (e) {
+          push("error", (e as Error).message);
+        }
+        return;
+      }
       case "list":
         handleList(arg as MemoryType | "");
         return;
@@ -240,7 +264,7 @@ export function App({ store, initialScope }: Props) {
       {/* Footer */}
       <Box paddingX={1}>
         <Text dimColor>
-          /help  ·  /remember &lt;type&gt; &lt;text&gt;  ·  /scope &lt;name&gt;  ·  /quit
+          /help  ·  /remember &lt;type&gt; &lt;text&gt;  ·  /supersede &lt;id&gt; &lt;text&gt;  ·  /quit
         </Text>
       </Box>
     </Box>

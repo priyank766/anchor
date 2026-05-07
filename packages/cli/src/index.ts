@@ -16,7 +16,8 @@ ${c.bold("Usage")}
   ${c.cyan("anchor init")}                  Create the data dir and DB at ~/.anchor
   ${c.cyan("anchor status")}                Show config and DB stats
   ${c.cyan("anchor list")} [--scope X]      List memories in a scope
-  ${c.cyan("anchor export")} [--scope X]    Print the entire memory store as JSON
+  ${c.cyan("anchor export")} [--scope X] [--anonymize]
+                                Print the memory store as JSON (optionally stripped of identity)
   ${c.cyan("anchor import")} <file>         Merge a JSON export into the local store
   ${c.cyan("anchor doctor")}                Run diagnostics (db, scope, redaction)
   ${c.cyan("anchor hook")} <event>          Claude Code hook adapter (internal)
@@ -92,10 +93,11 @@ async function main() {
 
     case "export": {
       const scopeArg = argFlag(rest, "--scope");
+      const anonymize = rest.includes("--anonymize");
       const store = new Store(cfg);
       let scopeId: string | undefined;
       if (scopeArg) scopeId = store.resolveScope(scopeArg).id;
-      const payload = store.exportAll(scopeId);
+      const payload = store.exportAll(scopeId, { anonymize });
       store.close();
       process.stdout.write(JSON.stringify(payload, null, 2) + "\n");
       return;

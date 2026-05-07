@@ -303,7 +303,7 @@ export class Store {
 
   // --- Export / import ---------------------------------------------------
 
-  exportAll(scopeId?: string): ExportPayload {
+  exportAll(scopeId?: string, opts: { anonymize?: boolean } = {}): ExportPayload {
     const scopeFilter = scopeId ? "WHERE scope_id = ?" : "";
     const params = scopeId ? [scopeId] : [];
     const facts = this.db
@@ -322,7 +322,8 @@ export class Store {
       ? this.db.prepare("SELECT * FROM scopes WHERE id = ?").all(scopeId)
       : this.db.prepare("SELECT * FROM scopes").all();
     const sources = this.db.prepare("SELECT * FROM sources").all();
-    return {
+
+    const payload: ExportPayload = {
       version: 1,
       exportedAt: Date.now(),
       scopes: scopes as ScopeRow[],
@@ -332,6 +333,9 @@ export class Store {
       episodes: episodes as RawRow[],
       artifacts: artifacts as RawRow[],
     };
+
+    if (opts.anonymize) anonymize(payload);
+    return payload;
   }
 
   // Insert-or-ignore by id. Round-trip safe: re-importing the same payload
@@ -464,6 +468,52 @@ export interface ExportPayload {
   decisions: RawRow[];
   episodes: RawRow[];
   artifacts: RawRow[];
+}
+
+// Anonymize an export payload in place. Strips agent/session ids, device ids,
+// and absolute paths. Leaves the schema and content intact so the export still
+// round-trips on import (with synthetic source/scope ids).
+function anonymize(p: ExportPayload): void {
+  // Map original source ids to synthetic ones; reuse the same synthetic id
+  // across rows so provenance edges are preserved without leaking identity.
+  const sourceMap = new Map<string, string>();
+  for (let i = 0; i < p.sources.length; i++) {
+    const orig = p.sources[i]!;
+    const synth = `anon-source-${i}`;
+    sourceMap.set(orig.id, synth);
+    p.sources[i] = {
+      id: synth,
+      agent: "anon",
+      session_id: null,
+      device_id: "anon",
+      created_at: 0,
+    };
+  }
+
+  // Strip absolute paths from scopes; keep synthetic-stable ids.
+  for (let i = 0; i < p.scopes.length; i++) {
+    const orig = p.scopes[i]!;
+    p.scopes[i] = {
+      id: orig.id, // hash already; safe to keep so refs resolve
+      path: null,
+      name: orig.path ? `anon-scope-${i}` : orig.name,
+      created_at: 0,
+    };
+  }
+
+  const stripRow = (r: RawRow) => {
+    if ("source_id" in r && typeof r.source_id === "string") {
+      r.source_id = sourceMap.get(r.source_id) ?? "anon-source-unknown";
+    }
+    if ("created_at" in r) r.created_at = 0;
+    if ("updated_at" in r) r.updated_at = 0;
+    if ("last_verified_at" in r) r.last_verified_at = null;
+  };
+  p.facts.forEach(stripRow);
+  p.decisions.forEach(stripRow);
+  p.episodes.forEach(stripRow);
+  p.artifacts.forEach(stripRow);
+  p.exportedAt = 0;
 }
 
 function rowToMemory(type: MemoryType, r: Record<string, unknown>): MemoryRow {
