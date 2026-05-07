@@ -17,7 +17,7 @@ import {
 } from "../../packages/server/dist/retrieval/compress.js";
 import { SCENARIOS } from "./fixtures.mjs";
 
-function evalScenario(s) {
+async function evalScenario(s) {
   const dir = mkdtempSync(join(tmpdir(), "anchor-eval-"));
   const cfg = {
     dataDir: dir,
@@ -29,7 +29,7 @@ function evalScenario(s) {
   const scopePath = `/eval/${s.id}`;
 
   for (const item of s.seed) {
-    handleRemember(store, {
+    await handleRemember(store, {
       type: item.type,
       content: item.content,
       rationale: item.rationale,
@@ -70,7 +70,7 @@ function evalScenario(s) {
   };
 }
 
-const results = SCENARIOS.map(evalScenario);
+const results = await Promise.all(SCENARIOS.map(evalScenario));
 
 const lines = [];
 lines.push("# Anchor — cold-vs-warm evaluation");

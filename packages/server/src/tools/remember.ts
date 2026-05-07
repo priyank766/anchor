@@ -1,9 +1,10 @@
-import type { Store } from "../store/db.js";
+import type { Store, MemoryType } from "../store/db.js";
 import { redact } from "../capture/redact.js";
 import { scrubInjections } from "../capture/scrub.js";
 import { RememberInput } from "./schemas.js";
 import { hostname } from "node:os";
 import { resolveDefaultScope } from "../scope.js";
+import { loadEmbedProvider } from "../providers/types.js";
 
 // Compose redaction (secrets) with injection scrubbing (untrusted-content
 // neutralization). Both run before any content reaches disk.
@@ -13,7 +14,7 @@ function clean(input: string): { text: string; redacted: string[]; scrubbed: str
   return { text: s.text, redacted: r.redacted, scrubbed: s.scrubbed };
 }
 
-export function handleRemember(store: Store, raw: unknown) {
+export async function handleRemember(store: Store, raw: unknown) {
   const input = RememberInput.parse(raw);
 
   const sourceContent = input.content ?? input.ref ?? "";
@@ -64,11 +65,41 @@ export function handleRemember(store: Store, raw: unknown) {
       break;
   }
 
+  // Best-effort embedding. Failure here must NOT fail the write — the row
+  // is already persisted, BM25 still works, and embeddings are an optional
+  // overlay. We surface the error in the return so callers can see it.
+  let embedded: { providerId: string } | { error: string } | undefined;
+  const provider = await loadEmbedProvider();
+  if (provider) {
+    try {
+      // Embed a representative string for each type. Decisions get the
+      // rationale because that's where the semantic meaning lives.
+      const text =
+        input.type === "decision" && safeRationale
+          ? `${safeContent}\n\nRationale: ${safeRationale}`
+          : input.type === "artifact" && safeNote
+            ? `${safeRef}: ${safeNote}`
+            : safeContent;
+      const vector = await provider.embed(text);
+      store.upsertEmbedding({
+        memoryId: id,
+        memoryType: input.type as MemoryType,
+        scopeId: scope.id,
+        providerId: provider.id,
+        vector,
+      });
+      embedded = { providerId: provider.id };
+    } catch (e) {
+      embedded = { error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
   return {
     id,
     scope: scope.name,
     type: input.type,
     redacted: redacted.length ? redacted : undefined,
     scrubbed: scrubbed.length ? scrubbed : undefined,
+    embedded,
   };
 }

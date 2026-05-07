@@ -173,6 +173,75 @@ export class Store {
     return false;
   }
 
+  // --- Embeddings ---------------------------------------------------------
+
+  upsertEmbedding(args: {
+    memoryId: string;
+    memoryType: MemoryType;
+    scopeId: string;
+    providerId: string;
+    vector: number[];
+  }): void {
+    this.db
+      .prepare(
+        `INSERT OR REPLACE INTO embeddings
+         (memory_id, memory_type, scope_id, provider_id, vector, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        args.memoryId,
+        args.memoryType,
+        args.scopeId,
+        args.providerId,
+        JSON.stringify(args.vector),
+        Date.now()
+      );
+  }
+
+  // Reads all embeddings in a scope for the given provider. Caller scores
+  // them against the query vector. Vector count is bounded by the user's
+  // memory volume in this scope; for the local-first product we expect
+  // hundreds to low thousands and don't need an ANN index yet.
+  listEmbeddings(
+    scopeId: string,
+    providerId: string
+  ): { memoryId: string; memoryType: MemoryType; vector: number[] }[] {
+    const rows = this.db
+      .prepare(
+        `SELECT memory_id, memory_type, vector FROM embeddings
+         WHERE scope_id = ? AND provider_id = ?`
+      )
+      .all(scopeId, providerId) as {
+      memory_id: string;
+      memory_type: MemoryType;
+      vector: string;
+    }[];
+    return rows.map((r) => ({
+      memoryId: r.memory_id,
+      memoryType: r.memory_type,
+      vector: JSON.parse(r.vector) as number[],
+    }));
+  }
+
+  hydrateMemoryById(id: string): MemoryRow | null {
+    for (const t of ["fact", "decision", "episode", "artifact"] as MemoryType[]) {
+      const row = this.fetchSingle(t, id);
+      if (row) return row;
+    }
+    return null;
+  }
+
+  private fetchSingle(type: MemoryType, id: string): MemoryRow | null {
+    const sqls: Record<MemoryType, string> = {
+      fact: `SELECT id, scope_id, source_id, content, superseded_by, created_at, updated_at FROM facts WHERE id = ? AND superseded_by IS NULL`,
+      decision: `SELECT id, scope_id, source_id, content, rationale, superseded_by, created_at, updated_at FROM decisions WHERE id = ? AND superseded_by IS NULL`,
+      episode: `SELECT id, scope_id, source_id, summary, files, salience, created_at, updated_at FROM episodes WHERE id = ?`,
+      artifact: `SELECT id, scope_id, source_id, ref, note, created_at, updated_at FROM artifacts WHERE id = ?`,
+    };
+    const r = this.db.prepare(sqls[type]).get(id) as Record<string, unknown> | undefined;
+    return r ? rowToMemory(type, r) : null;
+  }
+
   // --- Supersession -------------------------------------------------------
 
   // Marks an existing row as superseded by a new id. Returns the type of the

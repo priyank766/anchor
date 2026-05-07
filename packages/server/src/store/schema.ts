@@ -131,4 +131,20 @@ CREATE INDEX IF NOT EXISTS idx_facts_scope ON facts(scope_id);
 CREATE INDEX IF NOT EXISTS idx_decisions_scope ON decisions(scope_id);
 CREATE INDEX IF NOT EXISTS idx_episodes_scope ON episodes(scope_id);
 CREATE INDEX IF NOT EXISTS idx_artifacts_scope ON artifacts(scope_id);
+
+-- Embeddings table.
+-- One row per memory item that has been embedded. provider_id pins the vector
+-- to a specific (provider, model, dims) tuple so we detect mismatches if the
+-- user switches providers. vector is JSON-serialized — a float32 BLOB would
+-- be more efficient but JSON keeps export/import round-trippable.
+CREATE TABLE IF NOT EXISTS embeddings (
+  memory_id   TEXT NOT NULL,
+  memory_type TEXT NOT NULL CHECK(memory_type IN ('fact','decision','episode','artifact')),
+  scope_id    TEXT NOT NULL REFERENCES scopes(id),
+  provider_id TEXT NOT NULL,
+  vector      TEXT NOT NULL,
+  created_at  INTEGER NOT NULL,
+  PRIMARY KEY (memory_id, provider_id)
+);
+CREATE INDEX IF NOT EXISTS idx_embeddings_scope ON embeddings(scope_id, provider_id);
 `;

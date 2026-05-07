@@ -1,5 +1,5 @@
 // Anchor benchmark harness.
-// Measures: recall latency, gist token count, storage cost per memory.
+// Measures: insert latency, recall latency, gist token count, storage cost.
 // Run: node packages/server/dist/bench/bench.js
 
 import { mkdtempSync, statSync } from "node:fs";
@@ -56,7 +56,7 @@ const SAMPLE_EPISODES = [
   "Set up GrowthBook flags for the new pricing tier.",
 ];
 
-function bench(scale: number): Result {
+async function bench(scale: number): Promise<Result> {
   const dir = mkdtempSync(join(tmpdir(), "anchor-bench-"));
   const cfg = {
     dataDir: dir,
@@ -70,7 +70,7 @@ function bench(scale: number): Result {
     const pick = i % 10;
     const t0 = performance.now();
     if (pick < 5) {
-      handleRemember(store, {
+      await handleRemember(store, {
         type: "fact",
         content: `${SAMPLE_FACTS[i % SAMPLE_FACTS.length]} (entry ${i})`,
         scope: "bench",
@@ -79,7 +79,7 @@ function bench(scale: number): Result {
       });
     } else if (pick < 7) {
       const [c, r] = SAMPLE_DECISIONS[i % SAMPLE_DECISIONS.length]!;
-      handleRemember(store, {
+      await handleRemember(store, {
         type: "decision",
         content: `${c} (entry ${i})`,
         rationale: r,
@@ -87,14 +87,14 @@ function bench(scale: number): Result {
         agent: "bench",
       });
     } else if (pick < 9) {
-      handleRemember(store, {
+      await handleRemember(store, {
         type: "episode",
         content: `${SAMPLE_EPISODES[i % SAMPLE_EPISODES.length]} (entry ${i})`,
         scope: "bench",
         agent: "bench",
       });
     } else {
-      handleRemember(store, {
+      await handleRemember(store, {
         type: "artifact",
         content: `src/file${i}.ts`,
         ref: `src/file${i}.ts:${i}`,
@@ -120,9 +120,7 @@ function bench(scale: number): Result {
   let tokenSum = 0;
   for (const q of queries) {
     const t0 = performance.now();
-    const out = handleRecall(store, { query: q, scope: "bench" }) as {
-      gist: string;
-    };
+    const out = await handleRecall(store, { query: q, scope: "bench" });
     recallTimes.push(performance.now() - t0);
     tokenSum += estimateTokens(out.gist);
   }
@@ -154,7 +152,7 @@ console.log(
   "------   --------------   -----------   -----------   -----------   ----------   ----------"
 );
 for (const s of SCALES) {
-  const r = bench(s);
+  const r = await bench(s);
   const dbKb = (r.dbBytes / 1024).toFixed(1);
   console.log(
     `${String(r.scale).padStart(6)}   ${r.insertMsAvg.toFixed(2).padStart(14)}   ${r.recallMsP50.toFixed(2).padStart(11)}   ${r.recallMsP95.toFixed(2).padStart(11)}   ${String(r.gistTokensAvg).padStart(11)}   ${(dbKb + " KB").padStart(10)}   ${String(r.bytesPerItem).padStart(10)}`

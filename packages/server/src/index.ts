@@ -111,10 +111,10 @@ async function main() {
       let result: unknown;
       switch (name) {
         case "memory_recall":
-          result = handleRecall(store, args ?? {});
+          result = await handleRecall(store, args ?? {});
           break;
         case "memory_remember":
-          result = handleRemember(store, args ?? {});
+          result = await handleRemember(store, args ?? {});
           break;
         case "memory_forget":
           result = handleForget(store, args ?? {});
