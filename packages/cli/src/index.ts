@@ -19,6 +19,8 @@ ${c.bold("Usage")}
   ${c.cyan("anchor export")} [--scope X] [--anonymize]
                                 Print the memory store as JSON (optionally stripped of identity)
   ${c.cyan("anchor import")} <file>         Merge a JSON export into the local store
+  ${c.cyan("anchor prune")} [--scope X] [--below N]
+                                Delete episodes whose effective salience is below N (default 0.1)
   ${c.cyan("anchor doctor")}                Run diagnostics (db, scope, redaction)
   ${c.cyan("anchor hook")} <event>          Claude Code hook adapter (internal)
   ${c.cyan("anchor path")}                  Print the DB file path
@@ -128,6 +130,25 @@ async function main() {
 
     case "doctor": {
       runDoctor(cfg);
+      return;
+    }
+
+    case "prune": {
+      const scopeArg = argFlag(rest, "--scope");
+      const belowArg = argFlag(rest, "--below");
+      const threshold = belowArg ? Number(belowArg) : 0.1;
+      if (!Number.isFinite(threshold) || threshold < 0) {
+        process.stderr.write(err(`invalid --below value: ${belowArg}\n`));
+        process.exit(1);
+      }
+      const store = new Store(cfg);
+      let scopeId: string | undefined;
+      if (scopeArg) scopeId = store.resolveScope(scopeArg).id;
+      const deleted = store.pruneEpisodes(scopeId, threshold);
+      store.close();
+      process.stdout.write(
+        ok(`pruned ${c.bold(String(deleted))} episode${deleted === 1 ? "" : "s"} below salience ${threshold}\n`)
+      );
       return;
     }
 

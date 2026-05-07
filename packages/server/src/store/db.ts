@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { randomUUID, createHash } from "node:crypto";
 import type { AnchorConfig } from "../config.js";
 import { SCHEMA_SQL } from "./schema.js";
+import { effectiveSalience } from "../retrieval/salience.js";
 
 export type MemoryType = "fact" | "decision" | "episode" | "artifact";
 
@@ -246,7 +247,38 @@ export class Store {
         rows.push(rowToMemory(t.type, r));
       }
     }
-    return rows.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, limit);
+    // Sort by effective salience (decayed for episodes, full for everything
+    // else). Recency falls out for free since salience is multiplied by a
+    // recency-decay term.
+    const now = Date.now();
+    return rows
+      .sort((a, b) => rowScore(b, now) - rowScore(a, now))
+      .slice(0, limit);
+  }
+
+  // Delete episodes whose effective salience is below threshold. Returns
+  // count deleted. Facts/decisions never auto-prune — supersession is the
+  // explicit mechanism for those.
+  pruneEpisodes(scopeId: string | undefined, threshold: number): number {
+    const where = scopeId ? "WHERE scope_id = ?" : "";
+    const params = scopeId ? [scopeId] : [];
+    const candidates = this.db
+      .prepare(
+        `SELECT id, salience, updated_at FROM episodes ${where}`
+      )
+      .all(...params) as { id: string; salience: number; updated_at: number }[];
+
+    const now = Date.now();
+    const toDelete = candidates.filter(
+      (r) => effectiveSalience(r.salience, r.updated_at, now) < threshold
+    );
+    if (toDelete.length === 0) return 0;
+    const stmt = this.db.prepare("DELETE FROM episodes WHERE id = ?");
+    const tx = this.db.transaction((ids: string[]) => {
+      for (const id of ids) stmt.run(id);
+    });
+    tx(toDelete.map((r) => r.id));
+    return toDelete.length;
   }
 
   searchFTS(scopeId: string, query: string, limit = 50): MemoryRow[] {
@@ -514,6 +546,18 @@ function anonymize(p: ExportPayload): void {
   p.episodes.forEach(stripRow);
   p.artifacts.forEach(stripRow);
   p.exportedAt = 0;
+}
+
+// Score a row for retrieval ranking: episodes use decayed salience; everything
+// else uses recency directly. Higher = more relevant.
+function rowScore(r: MemoryRow, now: number): number {
+  if (r.type === "episode") {
+    return effectiveSalience(r.salience ?? 1, r.updatedAt, now);
+  }
+  // Recency normalized to 0..1-ish so it's comparable across types.
+  // Anchor's rerank doesn't care about absolute scale; only relative order.
+  const ageMs = Math.max(0, now - r.updatedAt);
+  return 1 / (1 + ageMs / (30 * 24 * 60 * 60 * 1000));
 }
 
 function rowToMemory(type: MemoryType, r: Record<string, unknown>): MemoryRow {
