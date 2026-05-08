@@ -1,15 +1,40 @@
 {
   "name": "@anchormem/anchor",
   "version": "0.0.1",
-  "description": "Anchor — cross-agent memory. Meta-package: installs the CLI and MCP server.",
+  "description": "Anchor — cross-agent memory for AI coding agents. Meta-package; installs the CLI and MCP server.",
+  "keywords": [
+    "mcp",
+    "anchor",
+    "memory",
+    "ai",
+    "claude",
+    "codex",
+    "cursor",
+    "gemini",
+    "cline",
+    "agents",
+    "local-first"
+  ],
+  "homepage": "https://github.com/priyank766/anchor#readme",
+  "bugs": {
+    "url": "https://github.com/priyank766/anchor/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/priyank766/anchor.git",
+    "directory": "packages/anchor"
+  },
   "type": "module",
   "bin": {
     "anchor": "bin/anchor.js",
     "anchor-server": "bin/anchor-server.js"
   },
   "dependencies": {
-    "@anchormem/cli": "*",
-    "@anchormem/server": "*"
+    "@anchormem/cli": "^0.0.1",
+    "@anchormem/server": "^0.0.1"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "files": ["bin", "README.md"],
   "license": "MIT"

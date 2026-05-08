@@ -1,7 +1,28 @@
 {
   "name": "@anchormem/server",
   "version": "0.0.1",
-  "description": "Anchor MCP server — local-first cross-agent memory.",
+  "description": "Anchor MCP server — local-first cross-agent memory for AI coding agents.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "anchor",
+    "memory",
+    "ai",
+    "claude",
+    "codex",
+    "cursor",
+    "agents",
+    "local-first"
+  ],
+  "homepage": "https://github.com/priyank766/anchor#readme",
+  "bugs": {
+    "url": "https://github.com/priyank766/anchor/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/priyank766/anchor.git",
+    "directory": "packages/server"
+  },
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -39,5 +60,9 @@
     "typescript": "^5.4.0",
     "vitest": "^2.0.0"
   },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
   "files": ["dist", "README.md"]
 }
