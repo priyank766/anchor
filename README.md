@@ -18,73 +18,50 @@
 
 </div>
 
----
-
-Anchor is an MCP server and open Agent Skill that gives any AI coding agent — Claude Code, Codex, Cursor, Cline, Gemini CLI, Continue.dev, Windsurf, OpenCode, Zed, and others — shared access to a single, durable memory of your project.
-
-When you change agents (rate limits, model preferences, team handoff), the next agent does not start cold. It calls `memory_recall` and receives a compressed, token-budgeted summary of what matters: prior decisions with rationale, durable preferences, recent task summaries, and file pointers. Not a transcript.
-
-No accounts. No API keys. One SQLite file at `~/.anchor/memory.db`.
+Anchor lets any AI coding agent — Claude Code, Codex, Cursor, Cline, Gemini CLI, Copilot, Windsurf, OpenCode, Zed, and others — share one project memory. Switch agents and the next one already knows your decisions, preferences, and recent work. No transcripts. No API keys. One local SQLite file you own.
 
 ---
 
-## Contents
+## Quick start
 
-- [Installation](#installation)
-- [Agent configuration](#agent-configuration)
-- [Concepts](#concepts)
-- [MCP tool reference](#mcp-tool-reference)
-- [Command-line interface](#command-line-interface)
-- [Benchmarks](#benchmarks)
-- [Security](#security)
-- [Architecture](#architecture)
-- [Development](#development)
-- [Auto-load on session start (hooks)](#auto-load-on-session-start-hooks)
-- [Optional: semantic recall via embeddings](#optional-semantic-recall-via-embeddings)
-- [Status](#status)
-- [License](#license)
-
----
-
-## Installation
+Three commands. Anchor is ready in under a minute.
 
 ```bash
+# 1. Install and initialize (creates ~/.anchor/)
 npx @anchormem/anchor init
+
+# 2. Tell Claude Code about it (or your agent of choice — see below)
+claude mcp add anchor -- anchor-server
+
+# 3. Open the interactive console any time
+anchor
 ```
 
-Or install as an open Agent Skill (compatible with 50+ agents through the [skills.sh](https://skills.sh) ecosystem):
+That's it. Your next Claude Code session can call `memory_recall` and `memory_remember` automatically. To verify everything's wired up:
 
 ```bash
-npx skills add priyank766/anchor
-```
-
-A Python distribution is planned:
-
-```bash
-pip install anchormem
+claude mcp list      # should show:  anchor: ✓ Connected
+anchor doctor        # checks data dir, scope, redaction, agent config
 ```
 
 ---
 
-## Agent configuration
+## Other agents
 
-Anchor exposes its tools through MCP over stdio. Each agent registers MCP servers differently.
+Anchor speaks [MCP](https://modelcontextprotocol.io), so almost every modern coding agent can use it. Pick yours:
 
-### Claude Code
-
-```bash
-claude mcp add anchor -- anchor-server
-```
-
-### Codex CLI
+<details>
+<summary><b>Codex CLI</b></summary>
 
 ```toml
 # ~/.codex/config.toml
 [mcp.anchor]
 command = "anchor-server"
 ```
+</details>
 
-### Cursor
+<details>
+<summary><b>Cursor</b></summary>
 
 ```json
 // .cursor/mcp.json
@@ -94,302 +71,161 @@ command = "anchor-server"
   }
 }
 ```
+</details>
 
-### Cline, Continue.dev, Windsurf, OpenCode, Zed
+<details>
+<summary><b>Cline / Continue.dev / Windsurf / OpenCode / Zed</b></summary>
 
 Each accepts an MCP server entry. Use `command: anchor-server` and refer to the host's MCP documentation for the configuration file location.
+</details>
 
----
+<details>
+<summary><b>Auto-load memory at session start (any agent)</b></summary>
 
-## Auto-load on session start (hooks)
-
-The MCP tools require the agent to *call* `memory_recall` at the right moment. The hook adapter avoids that: it injects prior project memory into the agent's context the moment a session starts. No tool call required.
-
-The adapter is `anchor hook <agent> <event>`. It reads optional JSON from stdin (the host's hook payload), figures out the project scope from `cwd` (git root), retrieves the most recent in-scope memory under a 1,500-token budget, and emits output in the format the host expects.
-
-| Agent | Output format | Behavior |
-|---|---|---|
-| `claude-code` | JSON: `{ hookSpecificOutput.additionalContext }` | Injected into the agent's system context. |
-| `gemini`, `codex`, `opencode`, `hermes`, `generic` | Plain text | Pipe into the agent's startup `--system` flag, stdin, or context-loader convention. |
-
-If the project scope has no memories, the hook emits nothing — Anchor never wastes the agent's context budget.
-
-### Claude Code
+Wire `anchor hook <agent> session-start` into the agent's startup. For Claude Code:
 
 ```jsonc
 // ~/.claude/settings.json
 {
   "hooks": {
-    "SessionStart": [
-      { "command": "anchor hook claude-code session-start" }
-    ]
+    "SessionStart": [{ "command": "anchor hook claude-code session-start" }]
   }
 }
 ```
 
-Verify with `anchor doctor` — it probes `~/.claude.json` and reports whether the entry is present.
-
-### Gemini CLI / Codex / OpenCode / Hermes
-
-Each tool has a way to load a system prompt at startup. Use the plain-text output:
-
-```bash
-# Generic shell pattern
-anchor hook generic session-start <<< "{}" > /tmp/anchor-context.txt
-gemini --system "$(cat /tmp/anchor-context.txt)"          # Gemini CLI
-codex --system-file /tmp/anchor-context.txt               # Codex (illustrative)
-opencode --context /tmp/anchor-context.txt                # OpenCode (illustrative)
-```
-
-The exact flag varies per agent; the contract is "Anchor produces the system-prompt fragment, you pipe it in." Empty when there is nothing to inject, so the wrapper never harms a fresh project.
-
-### Manual / shell-script integration
-
-For any agent not listed above, treat the `generic` flavor as the universal interface:
+For other agents, pipe the plain-text output into the agent's system-prompt flag:
 
 ```bash
 echo '{"cwd":"'"$PWD"'"}' | anchor hook generic session-start
 ```
 
-This is the same contract Anchor itself follows internally — every agent flavor is a small formatter on top of it.
+When the project scope has no memories, the hook emits nothing — Anchor never wastes the agent's context budget.
+</details>
 
 ---
 
-## Concepts
+## How it works
 
-Anchor stores four types of memory. Each has different retrieval and decay behavior.
+Your agent calls two tools:
 
-| Type | Purpose | Decay |
-|------|---------|-------|
-| `fact` | Durable preference or constraint. Example: *"uses pnpm, not npm"*. | None until superseded. |
-| `decision` | A choice made, with rationale. Example: *"use Postgres for the orders service — ACID + team familiarity"*. | None until superseded. |
-| `episode` | A 1–3 sentence task summary written by the calling agent. | Logarithmic salience decay. |
-| `artifact` | A pointer to a file, symbol, or URL. Example: `src/auth/middleware.ts:42`. | Tied to file existence. |
+- **`memory_recall(query)`** at the start of a task. Anchor returns a 1–2k-token summary of relevant prior context. Not a transcript — a structured gist of facts, decisions, recent task summaries, and file pointers.
+- **`memory_remember(...)`** when something durable happens. Four types:
+  - `fact` — a preference or constraint (*"uses pnpm, not npm"*)
+  - `decision` — a choice with rationale (*"use Postgres for orders — ACID + team familiarity"*)
+  - `episode` — a 1–3 sentence task summary (the agent writes it)
+  - `artifact` — a file or symbol pointer (`src/auth/middleware.ts:42`)
 
-Each record carries provenance — the calling agent's name, session identifier, and timestamp — so the consuming agent can trust or override individual items.
+When a fact goes stale, the agent uses **`memory_supersede`** instead of adding a contradicting one. Old facts age out via salience decay; secrets get redacted at write time; provenance travels with every recalled item.
 
-Memory is partitioned by **scope**. The default scope is `global`; agents typically pass the project root path as the scope to keep work isolated per project.
-
-Anchor does not call an external language model. The calling agent is responsible for writing its own summaries when it stores an episode. Anchor performs storage, retrieval, ranking, and token-budgeted compression.
+Anchor itself has no LLM. Your agent does the writing; Anchor does the storing, ranking, and compressing. There is no telemetry. There are no accounts.
 
 ---
 
-## MCP tool reference
+## Common commands
 
-### `memory_recall`
-
-Retrieve a token-budgeted gist of relevant memory.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `query` | string | Required. Description of the current task or question. |
-| `scope` | string | Optional. Project name or absolute path. Defaults to `global`. |
-| `budgetTokens` | number | Optional. Maximum tokens in the returned gist. Defaults to `1500`. |
-
-Returns a Markdown document with sections for Facts, Decisions, Recent episodes, and Artifacts, followed by a provenance footer naming the contributing sessions.
-
-### `memory_remember`
-
-Persist a memory record.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `type` | `"fact" \| "decision" \| "episode" \| "artifact"` | Required. |
-| `content` | string | Required for `fact`, `decision`, `episode`. |
-| `rationale` | string | Optional. Recommended for `decision`. |
-| `ref` | string | Required for `artifact`. Example: `src/auth/middleware.ts:42`. |
-| `note` | string | Optional. Used with `artifact`. |
-| `files` | string[] | Optional. Used with `episode`. |
-| `scope` | string | Optional. |
-| `agent` | string | Optional. The calling agent name. |
-| `sessionId` | string | Optional. |
-
-### `memory_forget`
-
-Delete a record by id. Required parameter: `id`.
-
-### `memory_list`
-
-Enumerate memory in a scope. Optional parameters: `scope`, `type`, `limit`.
-
----
-
-## Command-line interface
-
-```
-anchor                Interactive memory console
-anchor init           Initialize the data directory
-anchor status         Show configuration and stats
-anchor list           Print memories (non-interactive)
-anchor path           Print the database path
-anchor help           Show usage
+```bash
+anchor                  # interactive console (search, recall, remember, browse)
+anchor init             # initialize ~/.anchor (idempotent)
+anchor status           # what's stored, where
+anchor list             # print memories in the current scope
+anchor doctor           # diagnose db, scope, redaction, agent config
+anchor export > a.json  # back up to JSON
+anchor import a.json    # restore from JSON (idempotent)
+anchor prune            # drop low-salience episodes
+anchor reembed          # backfill embeddings (when configured)
+anchor help             # full reference
 ```
 
-`anchor` with no arguments opens an interactive console with a prompt-driven UI. Type a query to recall; use slash commands for everything else.
-
-```
-> rate limiting auth
-> /remember fact uses Vitest, not Jest
-> /remember decision use token bucket via Redis
-> /list decision
-> /scope /home/me/projects/api
-> /help
-> /quit
-```
-
-`Ctrl-C` to exit.
+The interactive console is the easiest way to inspect and edit memory. Type a query and press enter to recall; use slash commands (`/help`, `/remember`, `/supersede`, `/forget`, `/list`, `/scope`) for everything else.
 
 ---
 
-## Benchmarks
+## Optional: semantic recall
 
-Anchor's read path is the product. Below are end-to-end measurements on a Windows 11 / Node 22 host, with a fresh SQLite database, no embeddings, BM25 retrieval only. Reproducible via `node packages/server/dist/bench/bench.js`.
+Anchor's default retrieval is BM25 over SQLite FTS5 — fast, deterministic, no setup. If a query and a stored fact don't share keywords ("the auth thing" vs "JWT verifier rotation"), BM25 misses. To enable semantic recall, point Anchor at any embedding provider.
 
-| Memories stored | Insert avg | Recall p50 | Recall p95 | Gist size (avg) | DB size | Bytes / item |
-|---:|---:|---:|---:|---:|---:|---:|
-| 100    | 0.74 ms | 1.14 ms | 3.14 ms | 126 tokens  | 168 KB | 1,720 |
-| 1,000  | 0.83 ms | 1.53 ms | 1.93 ms | 553 tokens  | 596 KB | 610 |
-| 10,000 | 0.82 ms | 2.59 ms | 3.31 ms | 553 tokens  | 4.2 MB | 433 |
-
-Reading the table:
-
-- **Insert is constant-time** in practice — FTS5 keeps up with sustained writes.
-- **Recall stays under 4 ms p95 at 10,000 memories.** The query path is dominated by SQLite FTS5 BM25, not by Anchor's reranking.
-- **Gist size honors the budget.** Default budget is 1,500 tokens; at every scale the average response is well under it. Larger corpora produce *richer* gists, not bloated ones.
-- **Storage is amortized.** FTS index overhead dominates at small scale (1.7 KB/item at 100); at 10k items the marginal cost is ~430 bytes/item.
-
-### Context cost compared to a transcript dump
-
-If your alternative is pasting prior session transcripts into a new agent, a typical 30-minute coding session is 8,000–15,000 tokens of dialogue. Anchor's recall returns a 500–1,500-token gist at any database scale. This is the headline number.
-
-| Approach | Tokens injected | Information density |
-|---|---|---|
-| Cold start (no memory) | 0 | None |
-| Paste prior transcript | 8,000–15,000 | Low (high noise) |
-| Anchor recall | 500–1,500 | High (typed, ranked, deduplicated) |
-
-A formal cold-vs-warm benchmark across multiple agents (Claude Code, Codex, Gemini CLI) is on the Phase 1 roadmap.
-
----
-
-## Optional: semantic recall via embeddings
-
-Anchor's default retrieval is BM25 over SQLite FTS5 — fast, deterministic, and zero-config. It works on shared tokens between query and stored content. When the user asks about "the auth thing" but the relevant decision was titled "JWT verifier rotation", BM25 misses.
-
-For semantic recall, configure an embedding provider. Anchor adds a vector hit list alongside BM25, dedupes, and ranks. Provider stays opt-in; the core never requires one.
-
-### Ollama (local, recommended default)
-
-Install [Ollama](https://ollama.com) and pull a small embedding model:
+<details>
+<summary><b>Ollama (local, recommended)</b></summary>
 
 ```bash
 ollama pull nomic-embed-text
+export ANCHOR_EMBED_PROVIDER=ollama
 ```
 
-Tell Anchor to use it:
+That's all. Recall now returns hybrid hits (BM25 + vector). Other supported models: `mxbai-embed-large`, `all-minilm`, `bge-large`, `snowflake-arctic-embed`.
+</details>
+
+<details>
+<summary><b>OpenAI</b></summary>
 
 ```bash
-export ANCHOR_EMBED_PROVIDER=ollama
-export ANCHOR_EMBED_MODEL=nomic-embed-text   # default if omitted
+export ANCHOR_EMBED_PROVIDER=openai
+export ANCHOR_OPENAI_API_KEY=sk-...
+# Default: text-embedding-3-small. Set ANCHOR_EMBED_MODEL to override.
 ```
+</details>
 
-That's all. From the next `memory_remember` onwards, Anchor stores a vector alongside the row. `memory_recall` returns `mode: "hybrid"` and merges vector hits with BM25.
+<details>
+<summary><b>Google Gemini</b></summary>
 
-Other supported Ollama models (auto-detected dimensions): `mxbai-embed-large`, `all-minilm`, `bge-large`, `snowflake-arctic-embed`. For unknown models set `ANCHOR_EMBED_DIMENSIONS=<n>` explicitly.
+```bash
+export ANCHOR_EMBED_PROVIDER=gemini
+export ANCHOR_GEMINI_API_KEY=...
+# Default: text-embedding-004.
+```
+</details>
 
-### Why opt-in
+<details>
+<summary><b>Voyage AI (Anthropic-recommended)</b></summary>
 
-The product moat is compressed retrieval, not embeddings. BM25 is honest about the trade: it's lossy, but it's free, instant, and offline. Embeddings improve recall quality at a fixed local cost (the model lives on your machine) and zero monetary cost (no API). When dogfooding shows the BM25 miss rate is hurting you on a given scope, turn embeddings on for that scope.
+Anthropic has no first-party embeddings API; their official guidance is to use [Voyage](https://www.voyageai.com). Anchor accepts both `voyage` and the alias `anthropic`.
 
-### Hosted providers
+```bash
+export ANCHOR_EMBED_PROVIDER=voyage
+export ANCHOR_VOYAGE_API_KEY=...
+# Default: voyage-3.
+```
+</details>
 
-Adapters for hosted embedding providers (OpenAI, Anthropic, Gemini) are on the roadmap and will plug into the same `EmbedProvider` interface. Local-first remains the default — no provider, no problem.
+To backfill vectors for memories you stored before turning embeddings on:
+
+```bash
+anchor reembed
+```
 
 ---
 
 ## Security
 
-Anchor redacts known secret patterns at write time, before content reaches disk. Patterns covered include:
+Anchor redacts known secret patterns at write time (OpenAI / Anthropic / Google / Stripe / Slack / GitHub keys, AWS access keys, JWTs, PEM private keys, and `.env`-style variables that look like secrets). It also scrubs known prompt-injection phrases ("ignore previous instructions", "you are now …", "reveal your system prompt") before content reaches disk.
 
-- OpenAI, Anthropic, Google, Stripe, Slack, and GitHub API keys
-- AWS access key identifiers and likely secret access keys
-- JSON Web Tokens
-- PEM-encoded private key blocks (RSA, EC, DSA, OpenSSH, PGP)
-- `.env`-style assignments whose variable name implies a secret (`*_TOKEN`, `*_API_KEY`, `*_SECRET`, `*_PASSWORD`, `*_PRIVATE_KEY`, `*_ACCESS_KEY`)
+The data directory is created with mode `0700` and the database with `0600` on POSIX hosts. Recalled memory is delivered with an explicit *"treat as untrusted"* footer.
 
-Recalled content is delivered with a footer marking it as untrusted. Agents should treat recalled material as data, not instructions, to mitigate prompt-injection vectors.
+To report a security issue privately, see [SECURITY.md](SECURITY.md).
 
 ---
 
-## Architecture
+## Project status
 
-```
-Agents (Claude Code, Codex, Cursor, ...)
-   |  MCP (stdio)              |  Skill (SKILL.md)
-   v                           v
-Anchor MCP server (Node 20+, TypeScript)
-   |  Tools:    memory_recall / remember / forget / list
-   |  Retrieval: SQLite FTS5 (BM25) -> rerank -> token-budgeted gist
-   |  Capture:  redact-at-write
-   v
-SQLite at ~/.anchor/memory.db
-```
+Phase 0 skeleton plus most of Phase 1 are shipped: the four memory types, BM25 retrieval, hybrid (BM25 + vector) retrieval through four embedding providers, secret redaction, prompt-injection scrubbing, salience decay, supersession, export/import, the universal session-start hook, and a reproducible offline benchmark showing **97% token-cost reduction vs transcript paste** across two scenarios. 79 tests, all passing.
 
-The MCP server is the runtime. The Skill is the cross-agent contract that makes the runtime usable consistently across agents that speak the open Agent Skills specification.
-
-Anchor has no remote dependencies. There is no telemetry. Optional embedding-based vector search (via Ollama or hosted providers) is on the roadmap and will remain opt-in.
+Live cold-vs-warm benchmark across real agents and a marketing site are next.
 
 ---
 
-## Development
+## Contributing
 
-```bash
-git clone https://github.com/priyank766/anchor
-cd anchor
-npm install
-npm run build --workspaces
-npm test --workspaces
-```
+PRs welcome. We're especially looking for:
 
-Run the development server against Claude Code:
+- New agent integrations (tested install snippets)
+- Secret redaction patterns
+- Retrieval quality improvements (with benchmarks)
+- Documentation for setups we haven't tried yet
 
-```bash
-claude mcp add anchor -- node "$(pwd)/packages/server/dist/index.js"
-claude mcp list
-```
-
-Run the interactive console locally:
-
-```bash
-node packages/cli/dist/index.js
-```
-
-Run the benchmark:
-
-```bash
-node packages/server/dist/bench/bench.js
-```
-
-The repository is a TypeScript workspace:
-
-```
-packages/
-  server/    MCP server: schema, retrieval, redaction, tool handlers, bench
-  cli/       The anchor command and the interactive console
-  anchor/    Meta-package for npx @anchormem/anchor
-  skill/     SKILL.md — the open Agent Skills entry
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for code style and contribution scope.
-
----
-
-## Status
-
-Phase 0. The schema, MCP tool surface, BM25 retrieval, redaction, CLI, interactive console, and benchmark harness are in place. Token-budgeted compression and embedding-backed retrieval are scheduled for Phase 1.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution scope and what we will / won't merge.
 
 ---
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — use it for anything, attribution appreciated.
