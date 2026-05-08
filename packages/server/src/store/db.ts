@@ -223,6 +223,32 @@ export class Store {
     }));
   }
 
+  // Returns rows in a scope that lack an embedding under the given provider.
+  // Used by `anchor reembed` to backfill vectors when a user opts into
+  // embeddings on an existing store, or switches providers.
+  rowsMissingEmbedding(
+    scopeId: string,
+    providerId: string
+  ): MemoryRow[] {
+    // Collect existing vector keys for this provider in this scope.
+    const existing = new Set(
+      (
+        this.db
+          .prepare(
+            `SELECT memory_id FROM embeddings WHERE scope_id = ? AND provider_id = ?`
+          )
+          .all(scopeId, providerId) as { memory_id: string }[]
+      ).map((r) => r.memory_id)
+    );
+
+    const out: MemoryRow[] = [];
+    const all = this.listByScope(scopeId, undefined, 100_000);
+    for (const r of all) {
+      if (!existing.has(r.id)) out.push(r);
+    }
+    return out;
+  }
+
   hydrateMemoryById(id: string): MemoryRow | null {
     for (const t of ["fact", "decision", "episode", "artifact"] as MemoryType[]) {
       const row = this.fetchSingle(t, id);

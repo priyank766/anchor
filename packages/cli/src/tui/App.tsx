@@ -3,6 +3,7 @@ import { Box, Text, useApp, useInput, Static } from "ink";
 import TextInput from "ink-text-input";
 import type { Store, MemoryRow, MemoryType } from "@anchormem/server/store/db";
 import { handleSupersede } from "@anchormem/server/tools/supersede";
+import { handleRemember as handleRememberShared } from "@anchormem/server/tools/remember";
 import { BIG_BANNER_LINES } from "../ui.js";
 
 interface Props {
@@ -170,25 +171,27 @@ export function App({ store, initialScope }: Props) {
     push("result", formatRows(rows));
   }
 
+  // Routes through the shared async handler so writes get redaction,
+  // injection scrubbing, and embedding (when configured). The TUI itself
+  // doesn't await Promises in its event loop — fire-and-feedback by
+  // dispatching the result via push() when the handler resolves.
   function handleRemember(type: MemoryType, text: string) {
-    const ref = store.resolveScope(scope);
-    const sourceId = store.recordSource({ agent: "anchor-tui", deviceId: "local" });
-    let id: string;
-    switch (type) {
-      case "fact":
-        id = store.insertFact({ scopeId: ref.id, sourceId, content: text });
-        break;
-      case "decision":
-        id = store.insertDecision({ scopeId: ref.id, sourceId, content: text });
-        break;
-      case "episode":
-        id = store.insertEpisode({ scopeId: ref.id, sourceId, summary: text });
-        break;
-      case "artifact":
-        id = store.insertArtifact({ scopeId: ref.id, sourceId, ref: text });
-        break;
-    }
-    push("info", `remembered ${type} ${id.slice(0, 8)}`);
+    const args =
+      type === "artifact"
+        ? { type, ref: text, scope, agent: "anchor-tui" }
+        : { type, content: text, scope, agent: "anchor-tui" };
+    handleRememberShared(store, args).then(
+      (out) => {
+        const tags: string[] = [];
+        if (out.redacted) tags.push(`redacted: ${out.redacted.join(",")}`);
+        if (out.scrubbed) tags.push(`scrubbed: ${out.scrubbed.join(",")}`);
+        const suffix = tags.length ? ` (${tags.join("; ")})` : "";
+        push("info", `remembered ${type} ${out.id.slice(0, 8)}${suffix}`);
+      },
+      (e: unknown) => {
+        push("error", `remember failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    );
   }
 
   function handleForget(id: string) {

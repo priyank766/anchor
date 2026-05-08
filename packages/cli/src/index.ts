@@ -21,6 +21,8 @@ ${c.bold("Usage")}
   ${c.cyan("anchor import")} <file>         Merge a JSON export into the local store
   ${c.cyan("anchor prune")} [--scope X] [--below N]
                                 Delete episodes whose effective salience is below N (default 0.1)
+  ${c.cyan("anchor reembed")} [--scope X] [--limit N]
+                                Backfill embeddings for memories missing them (requires ANCHOR_EMBED_PROVIDER)
   ${c.cyan("anchor doctor")}                Run diagnostics (db, scope, redaction)
   ${c.cyan("anchor hook")} <event>          Claude Code hook adapter (internal)
   ${c.cyan("anchor path")}                  Print the DB file path
@@ -149,6 +151,35 @@ async function main() {
       process.stdout.write(
         ok(`pruned ${c.bold(String(deleted))} episode${deleted === 1 ? "" : "s"} below salience ${threshold}\n`)
       );
+      return;
+    }
+
+    case "reembed": {
+      const scopeArg = argFlag(rest, "--scope");
+      const limitArg = argFlag(rest, "--limit");
+      const limit = limitArg ? Number(limitArg) : undefined;
+      const { runReembed } = await import("./reembed.js");
+      try {
+        const result = await runReembed({
+          scope: scopeArg,
+          limit,
+          onProgress: (done, total) => {
+            // Minimal progress: rewrite a single line.
+            if (process.stdout.isTTY) {
+              process.stdout.write(`\r${c.dim(`embedding ${done}/${total}…`)}`);
+            }
+          },
+        });
+        if (process.stdout.isTTY) process.stdout.write("\r" + " ".repeat(40) + "\r");
+        process.stdout.write(
+          ok(
+            `embedded ${c.bold(String(result.embedded))} ${c.dim(`(${result.failed} failed)`)} via ${c.cyan(result.provider)}\n`
+          )
+        );
+      } catch (e) {
+        process.stderr.write(err(`${(e as Error).message}\n`));
+        process.exit(1);
+      }
       return;
     }
 
