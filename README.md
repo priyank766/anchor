@@ -40,6 +40,7 @@ No accounts. No API keys. One SQLite file at `~/.anchor/memory.db`.
 - [Architecture](#architecture)
 - [Development](#development)
 - [Auto-load on session start (hooks)](#auto-load-on-session-start-hooks)
+- [Optional: semantic recall via embeddings](#optional-semantic-recall-via-embeddings)
 - [Status](#status)
 - [License](#license)
 
@@ -268,6 +269,41 @@ If your alternative is pasting prior session transcripts into a new agent, a typ
 | Anchor recall | 500–1,500 | High (typed, ranked, deduplicated) |
 
 A formal cold-vs-warm benchmark across multiple agents (Claude Code, Codex, Gemini CLI) is on the Phase 1 roadmap.
+
+---
+
+## Optional: semantic recall via embeddings
+
+Anchor's default retrieval is BM25 over SQLite FTS5 — fast, deterministic, and zero-config. It works on shared tokens between query and stored content. When the user asks about "the auth thing" but the relevant decision was titled "JWT verifier rotation", BM25 misses.
+
+For semantic recall, configure an embedding provider. Anchor adds a vector hit list alongside BM25, dedupes, and ranks. Provider stays opt-in; the core never requires one.
+
+### Ollama (local, recommended default)
+
+Install [Ollama](https://ollama.com) and pull a small embedding model:
+
+```bash
+ollama pull nomic-embed-text
+```
+
+Tell Anchor to use it:
+
+```bash
+export ANCHOR_EMBED_PROVIDER=ollama
+export ANCHOR_EMBED_MODEL=nomic-embed-text   # default if omitted
+```
+
+That's all. From the next `memory_remember` onwards, Anchor stores a vector alongside the row. `memory_recall` returns `mode: "hybrid"` and merges vector hits with BM25.
+
+Other supported Ollama models (auto-detected dimensions): `mxbai-embed-large`, `all-minilm`, `bge-large`, `snowflake-arctic-embed`. For unknown models set `ANCHOR_EMBED_DIMENSIONS=<n>` explicitly.
+
+### Why opt-in
+
+The product moat is compressed retrieval, not embeddings. BM25 is honest about the trade: it's lossy, but it's free, instant, and offline. Embeddings improve recall quality at a fixed local cost (the model lives on your machine) and zero monetary cost (no API). When dogfooding shows the BM25 miss rate is hurting you on a given scope, turn embeddings on for that scope.
+
+### Hosted providers
+
+Adapters for hosted embedding providers (OpenAI, Anthropic, Gemini) are on the roadmap and will plug into the same `EmbedProvider` interface. Local-first remains the default — no provider, no problem.
 
 ---
 
