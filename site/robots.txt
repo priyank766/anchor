@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://anchormem.dev/sitemap.xml

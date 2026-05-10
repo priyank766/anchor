@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Anchor — Cross-agent memory for AI coding agents</title>
+<meta name="description" content="Cross-agent memory for AI coding agents. Local-first MCP server plus open Skill. Switch agents and your project context comes with you. MIT licensed.">
+<link rel="canonical" href="https://anchormem.dev/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Anchor — Cross-agent memory for AI coding agents">
+<meta property="og:description" content="Local-first MCP server plus open Skill. Switch agents and your project context comes with you.">
+<meta property="og:url" content="https://anchormem.dev/">
+<meta property="og:image" content="https://anchormem.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://anchormem.dev/assets/og.png">
+<meta name="theme-color" content="#FAF6EF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16110B" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/main.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Anchor","applicationCategory":"DeveloperApplication","operatingSystem":"cross-platform","description":"Cross-agent memory for AI coding agents.","url":"https://anchormem.dev/","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"Priyank Patel","url":"https://priyank.is-a.dev/"}}
+</script>
+</head>
+<body>
+
+<a href="#main" class="skip">Skip to content</a>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<header class="nav" role="banner">
+  <a href="#" class="nav-brand" aria-label="Anchor home">
+    <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+    <span>Anchor<span style="color:var(--accent);font-style:italic">.</span></span>
+  </a>
+  <div class="nav-meta">
+    Index № 001 &nbsp;·&nbsp; <b>Cross-agent memory</b> &nbsp;·&nbsp; v0.0.1
+  </div>
+  <nav class="nav-links" aria-label="Primary">
+    <a href="https://github.com/priyank766/anchor" target="_blank" rel="noopener" class="lbl-github">GitHub</a>
+    <a href="https://www.npmjs.com/package/@anchormem/anchor" target="_blank" rel="noopener" class="lbl-npm">npm</a>
+    <a href="#install" class="cta">Install</a>
+    <button class="theme-toggle" type="button" aria-label="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+      </svg>
+    </button>
+  </nav>
+</header>
+
+<main id="main">
+
+<!-- 1. HERO -->
+<section class="hero" data-screen-label="01 Hero">
+  <div class="hero-grid">
+    <div class="hero-meta">
+      <div>Issue<b>№ 001 / 2026</b></div>
+      <div>License<b>MIT</b></div>
+      <div>Distribution<b>npm · @anchormem/anchor</b></div>
+      <div>Filed under<b>Developer tools, memory</b></div>
+    </div>
+
+    <h1 class="wordmark" aria-label="Anchor.">
+      <span class="ch">A</span><span class="ch">n</span><span class="ch">c</span><span class="ch">h</span><span class="ch">o</span><span class="ch">r</span><span class="ch dot">.</span>
+    </h1>
+
+    <div class="hero-bottom">
+      <p class="tagline">Cross-agent memory for AI coding agents.</p>
+      <div class="hero-side">
+        <p class="hero-lede">Switch from Claude Code to Codex to Gemini CLI. Your project context comes with you. Local-first, no API keys, one SQLite file you own.</p>
+        <div class="cta-row">
+          <a class="btn-primary" href="#install">Install</a>
+          <a class="btn-ghost" href="https://github.com/priyank766/anchor" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. COLD OPEN -->
+<section class="section coldopen" data-screen-label="02 Cold Open">
+  <div class="coldopen-grid">
+    <div class="coldopen-side">
+      <span class="num">01</span>
+      The Problem
+    </div>
+    <div class="coldopen-body fade-p-group">
+      <p class="fade-p">You've been working with Claude Code for three hours. It knows that you use pnpm, that the auth middleware lives in <code>src/auth/middleware.ts</code>, that you migrated away from Jest last quarter, and that the rate-limiter conversation already happened — you settled on Redis token buckets.</p>
+      <p class="fade-p">Then you hit your usage limit. Or your teammate prefers Cursor. Or Codex actually handles this refactor better.</p>
+      <p class="fade-p">The next agent doesn't know any of that. It asks you, again, what testing framework you use.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. HEADLINE NUMBER -->
+<section class="section headline-number" data-screen-label="03 Headline Number">
+  <div class="headline-grid">
+    <h2 class="big-num" data-counter aria-label="97.6 percent">0.0<span class="pct">%</span></h2>
+    <div>
+      <p class="qualifier">fewer tokens injected to bring a new agent up to speed.</p>
+      <p class="footnote">Measured on a real task — adding rate limiting to /auth/* endpoints. Cold start: 9,400 tokens of pasted transcripts. With Anchor: 224 tokens, 5 of 5 relevant facts retrieved. Reproducible at tests/eval/run.mjs.</p>
+    </div>
+  </div>
+</section>
+
+<div class="flourish"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg></div>
+
+<!-- 4. SPLIT -->
+<section class="section split" data-screen-label="04 Split">
+  <div class="split-head">
+    <div>
+      <p class="eyebrow">04 — A/B</p>
+      <h2 style="max-width:14ch">Same task. Two starts.</h2>
+    </div>
+    <p class="lede" style="margin:0">A single command on each side. The diff between them is everything Anchor does.</p>
+  </div>
+
+  <div class="split-grid">
+    <div class="split-col left">
+      <div class="split-label">
+        <span class="tag"><span class="dot"></span>Without Anchor</span>
+        <span class="badge">cold</span>
+      </div>
+      <div class="terminal">
+<pre id="term-cold" class="terminal-body" data-text="$ gemini ask &quot;add rate limiting to /auth/*&quot;
+
+Loading prior session transcripts as context…
+─ 9,400 tokens injected ──────────────────
+
+Q: What testing framework does this repo use?
+Q: What's the package manager?
+Q: Where do auth middlewares live?
+Q: Is there a preference between Redis and Memcached?
+
+Time to first useful action: 8m 12s">$ gemini ask "add rate limiting to /auth/*"
+
+Loading prior session transcripts as context…
+─ 9,400 tokens injected ──────────────────
+
+Q: What testing framework does this repo use?
+Q: What's the package manager?
+Q: Where do auth middlewares live?
+Q: Is there a preference between Redis and Memcached?
+
+Time to first useful action: 8m 12s</pre>
+      </div>
+    </div>
+
+    <div class="split-col right">
+      <div class="split-label">
+        <span class="tag"><span class="dot"></span>With Anchor</span>
+        <span class="badge">warm</span>
+      </div>
+      <div class="terminal">
+<pre id="term-warm" class="terminal-body">$ gemini ask "add rate limiting to /auth/*"
+
+Anchor: recalled 5 facts, 2 decisions, 1 episode
+─ 224 tokens injected ─────────────────────
+
+Uses Vitest. Package manager is pnpm.
+Auth middleware in src/auth/middleware.ts.
+Decision: Redis token bucket
+  (tried in-memory; failed multi-region.)
+
+Time to first useful action: 1m 40s</pre>
+      </div>
+    </div>
+  </div>
+
+  <p class="split-caption">Same task. Same agent. The only difference: a 224-token recall from a SQLite file the user owns.</p>
+</section>
+
+<!-- 5. HOW IT WORKS -->
+<section class="section" data-screen-label="05 How It Works">
+  <div class="container">
+    <p class="eyebrow reveal">05 — How it works</p>
+    <h2 class="reveal" style="max-width: 22ch;">Four kinds of memory. Each typed on the way in.</h2>
+
+    <div class="cards" aria-label="Memory types">
+      <article class="card" style="--c: var(--mem-fact);">
+        <div class="card-header"><div class="card-type"><span class="dot"></span>fact</div><div class="card-num">001</div></div>
+        <p class="card-quote">"uses pnpm, not npm"</p>
+        <div class="card-foot">A durable preference or constraint.</div>
+      </article>
+      <article class="card" style="--c: var(--mem-decision);">
+        <div class="card-header"><div class="card-type"><span class="dot"></span>decision</div><div class="card-num">002</div></div>
+        <p class="card-quote">"use Postgres for the orders service — ACID + team familiarity"</p>
+        <div class="card-foot">A choice made, with rationale.</div>
+      </article>
+      <article class="card" style="--c: var(--mem-episode);">
+        <div class="card-header"><div class="card-type"><span class="dot"></span>episode</div><div class="card-num">003</div></div>
+        <p class="card-quote">"Added rate limiting via Redis token bucket; touched src/auth/*"</p>
+        <div class="card-foot">A 1–3 sentence task summary written by the agent itself.</div>
+      </article>
+      <article class="card" style="--c: var(--mem-artifact);">
+        <div class="card-header"><div class="card-type"><span class="dot"></span>artifact</div><div class="card-num">004</div></div>
+        <p class="card-quote mono">src/auth/middleware.ts:42</p>
+        <div class="card-foot">A pointer to a file or symbol.</div>
+      </article>
+    </div>
+
+    <p class="cards-coda reveal">When a fact goes stale, the agent uses <code>memory_supersede</code> instead of adding a contradicting one. Old episodes age out via salience decay. Secrets get redacted at write time. Provenance travels with every recalled item.</p>
+  </div>
+</section>
+
+<!-- 6. ARCHITECTURE -->
+<section class="section tight" data-screen-label="06 Architecture">
+  <div class="container">
+    <p class="eyebrow reveal">06 — Architecture</p>
+    <h2 class="reveal" style="max-width: 22ch;">One server. Five tools. A SQLite file you own.</h2>
+
+    <div class="arch-frame reveal" style="margin-top: 16px;">
+      <span class="arch-corner tr"></span><span class="arch-corner tr2"></span>
+      <span class="arch-corner bl"></span><span class="arch-corner bl2"></span>
+      <span class="arch-corner br"></span><span class="arch-corner br2"></span>
+
+      <div class="arch arch-svg-wrap" role="img" aria-label="Anchor architecture: five coding agents connect to a central Anchor MCP server, which writes to a local SQLite file. Optional dashed connections lead to four embedding providers.">
+        <svg viewBox="0 0 1080 540" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+          <!-- agents row -->
+          <g data-stage="1">
+            <text class="sm" x="40"  y="30">A.01</text>
+            <text class="sm" x="240" y="30">A.02</text>
+            <text class="sm" x="440" y="30">A.03</text>
+            <text class="sm" x="640" y="30">A.04</text>
+            <text class="sm" x="840" y="30">A.05</text>
+            <text x="80"  y="64" text-anchor="middle">Claude Code</text>
+            <text x="280" y="64" text-anchor="middle">Codex</text>
+            <text x="480" y="64" text-anchor="middle">Cursor</text>
+            <text x="680" y="64" text-anchor="middle">Cline</text>
+            <text x="880" y="64" text-anchor="middle">Gemini CLI</text>
+            <line x1="40" y1="80" x2="1040" y2="80" class="tick"/>
+          </g>
+
+          <!-- connections to server (orthogonal) -->
+          <g data-stage="2">
+            <path id="c-a1" class="conn" d="M80 80 L 80 170 L 200 170 L 200 220"/>
+            <path id="c-a2" class="conn" d="M280 80 L 280 170 L 340 170 L 340 220"/>
+            <path id="c-a3" class="conn" d="M480 80 L 480 220"/>
+            <path id="c-a4" class="conn" d="M680 80 L 680 170 L 620 170 L 620 220"/>
+            <path id="c-a5" class="conn" d="M880 80 L 880 170 L 760 170 L 760 220"/>
+          </g>
+
+          <!-- server capsule -->
+          <g data-stage="3">
+            <rect class="capsule" x="100" y="220" width="780" height="100"/>
+            <line x1="100" y1="260" x2="880" y2="260" stroke="var(--rule-soft)" stroke-width="1"/>
+            <text class="cap" x="120" y="252">Anchor MCP server</text>
+            <g transform="translate(340, 234)" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="4" r="2.5"/>
+              <path d="M12 21V6.5"/>
+              <path d="M5 11h14"/>
+              <path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/>
+            </g>
+            <text class="sm" x="780" y="244" text-anchor="end">SERVER · 0.0.1</text>
+            <text x="120" y="284">recall · remember · supersede · forget · list</text>
+            <text class="sm" x="120" y="306">BM25 + optional vector hybrid · redact · scrub · compress</text>
+          </g>
+
+          <!-- to db -->
+          <g data-stage="4">
+            <path id="c-db" class="conn" d="M280 320 L 280 400"/>
+            <rect class="surf" x="100" y="400" width="360" height="84"/>
+            <text class="cap" x="120" y="432">~/.anchor/memory.db</text>
+            <text class="sm" x="120" y="458">SQLite · FTS5 BM25 · single file</text>
+            <text class="sm" x="440" y="416" text-anchor="end">DB</text>
+            <line x1="100" y1="446" x2="460" y2="446" stroke="var(--rule-soft)"/>
+          </g>
+
+          <!-- optional embeddings -->
+          <g data-stage="5">
+            <text class="sm" x="540" y="396">EMBEDDINGS · OPT-IN</text>
+            <path id="c-e1" class="conn dashed" d="M540 400 L 540 430 L 580 430"/>
+            <path id="c-e2" class="conn dashed" d="M540 400 L 540 460 L 580 460"/>
+            <g font-family="JetBrains Mono, monospace">
+              <rect class="surf" x="580" y="416" width="120" height="28"/>
+              <text x="640" y="434" text-anchor="middle">Ollama</text>
+              <rect class="surf" x="710" y="416" width="120" height="28"/>
+              <text x="770" y="434" text-anchor="middle">OpenAI</text>
+              <rect class="surf" x="840" y="416" width="120" height="28"/>
+              <text x="900" y="434" text-anchor="middle">Gemini</text>
+              <rect class="surf" x="580" y="450" width="120" height="28"/>
+              <text x="640" y="468" text-anchor="middle">Voyage</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. PERFORMANCE -->
+<section class="section" data-screen-label="07 Performance">
+  <div class="container">
+    <p class="eyebrow reveal">07 — Performance</p>
+    <h2 class="reveal">Tested at scale.</h2>
+    <p class="lede reveal" style="margin-bottom:48px;font-family:var(--mono);font-size:13px;letter-spacing:0.04em">Reproducible via <span style="color:var(--ink)">node packages/server/dist/bench/bench.js</span></p>
+
+    <div class="perf-table-wrap reveal">
+      <table class="perf-table">
+        <thead>
+          <tr><th>Memories</th><th>Insert avg</th><th>Recall p50</th><th>Recall p95</th><th>Gist size</th><th>DB size</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>100</td><td>0.74 ms</td><td>1.14 ms</td><td>3.14 ms<span class="bar" style="--w: 95%"></span></td><td>126 tokens</td><td>168 KB</td></tr>
+          <tr><td>1,000</td><td>0.83 ms</td><td>1.53 ms</td><td>1.93 ms<span class="bar" style="--w: 58%"></span></td><td>553 tokens</td><td>596 KB</td></tr>
+          <tr><td>10,000</td><td>0.82 ms</td><td>2.59 ms</td><td>3.31 ms<span class="bar" style="--w: 100%"></span></td><td>553 tokens</td><td>4.2 MB</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="perf-cap reveal">Recall stays under 4 ms p95 at 10,000 memories. The query path is dominated by SQLite FTS5 BM25, not by Anchor's reranking.</p>
+  </div>
+</section>
+
+<!-- 8. AGENTS -->
+<section class="section tight" data-screen-label="08 Agents">
+  <div class="container">
+    <p class="eyebrow reveal">08 — Compatible agents</p>
+    <h2 class="reveal" style="max-width:24ch">Speaks the Model Context Protocol. Works with —</h2>
+
+    <div class="marquee-wrap reveal" style="margin-top:48px">
+      <div class="marquee">
+        <div class="marquee-inner">
+          <span>Claude Code</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Codex</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Cursor</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Cline</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Gemini CLI</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Continue.dev</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Windsurf</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>OpenCode</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Zed</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Copilot</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Aider</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+        </div>
+        <div class="marquee-inner" aria-hidden="true">
+          <span>Claude Code</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Codex</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Cursor</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Cline</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Gemini CLI</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Continue.dev</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Windsurf</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>OpenCode</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Zed</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Copilot</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+          <span>Aider</span><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <p class="agents-foot reveal">Plus 50+ more via the open Agent Skills spec at <a href="https://skills.sh" target="_blank" rel="noopener">skills.sh</a>.</p>
+  </div>
+</section>
+
+<div class="flourish"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg></div>
+
+<!-- 9. INSTALL -->
+<section class="section" id="install" data-screen-label="09 Install">
+  <div class="install-grid">
+    <div class="install-side">
+      <span class="num">09</span>
+      Quick start
+      <p>Three commands. Less than a minute. Anchor is local-first — nothing leaves your machine.</p>
+    </div>
+
+    <div>
+      <div class="cmd reveal">
+        <div class="cmd-head">
+          <span class="step"><span class="step-num">1</span>Install &amp; init</span>
+          <button class="cmd-copy" type="button" aria-label="Copy command 1">Copy</button>
+        </div>
+        <span class="cmd-line"><span class="pp">$</span> npx @anchormem/anchor init</span>
+      </div>
+      <div class="cmd reveal">
+        <div class="cmd-head">
+          <span class="step"><span class="step-num">2</span>Register with agent</span>
+          <button class="cmd-copy" type="button" aria-label="Copy command 2">Copy</button>
+        </div>
+        <span class="cmd-line"><span class="pp">$</span> claude mcp add anchor -- anchor-server</span>
+      </div>
+      <div class="cmd reveal">
+        <div class="cmd-head">
+          <span class="step"><span class="step-num">3</span>Open the console</span>
+          <button class="cmd-copy" type="button" aria-label="Copy command 3">Copy</button>
+        </div>
+        <span class="cmd-line"><span class="pp">$</span> anchor</span>
+      </div>
+
+      <div class="install-coda reveal">
+        <p><a href="https://github.com/priyank766/anchor#other-agents" target="_blank" rel="noopener">Other agents</a> — Codex, Cursor, Cline, Gemini CLI, Continue.dev, Windsurf, OpenCode, Zed.</p>
+        <p><a href="https://github.com/priyank766/anchor#optional-semantic-recall-via-embeddings" target="_blank" rel="noopener">Optional semantic recall</a> — Ollama, OpenAI, Gemini, or Voyage.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. SECURITY -->
+<section class="section security" data-screen-label="10 Security">
+  <div class="security-grid">
+    <div class="security-side">
+      <span class="num">10</span>
+      <p class="eyebrow" style="margin:0">Trust</p>
+      <h2 style="margin:8px 0 0;font-size:clamp(2rem,3.6vw,2.6rem)">Trust by default.</h2>
+    </div>
+    <div class="security-body">
+      <p class="reveal">Anchor redacts known secret patterns at write time — OpenAI, Anthropic, Google, Stripe, Slack, GitHub keys; AWS access keys; JWTs; PEM private keys; .env-style variables that look like secrets. It also scrubs known prompt-injection phrases ("ignore previous instructions", "you are now …", "reveal your system prompt") before content reaches disk. The data directory is created with mode 0700; the database with 0600 on POSIX hosts. Recalled content carries an explicit "treat as untrusted" footer. There is no telemetry. There are no accounts.</p>
+      <a class="more reveal" href="https://github.com/priyank766/anchor/blob/main/SECURITY.md" target="_blank" rel="noopener">Read the security policy →</a>
+    </div>
+  </div>
+</section>
+
+<!-- 11. FAQ -->
+<section class="section" data-screen-label="11 FAQ">
+  <div class="container">
+    <p class="eyebrow reveal">11 — Questions</p>
+    <h2 class="reveal" style="margin-bottom:56px">A few honest answers.</h2>
+
+    <div class="faq">
+      <details open>
+        <summary><span class="qn">Q.01</span><span>Is this an agent?</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div>No. Anchor doesn't generate, plan, or act. It remembers. Your agent does the work.</div>
+      </details>
+      <details open>
+        <summary><span class="qn">Q.02</span><span>Does it need an LLM API key?</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div>No. The calling agent writes its own summaries. Embeddings (vector search) are optional and can be local (Ollama) or hosted.</div>
+      </details>
+      <details open>
+        <summary><span class="qn">Q.03</span><span>What about privacy?</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div>Local-first. Single SQLite file. Secret redaction at write time. Per-project scoping so work memory doesn't leak into personal projects.</div>
+      </details>
+      <details>
+        <summary><span class="qn">Q.04</span><span>How is this different from mem0 / Letta / Zep / OpenMemory MCP?</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div>Most ship an SDK and require code changes in your agent. Anchor ships an MCP server plus an open Skill — no code changes in any agent that already speaks MCP. Plus typed memory (facts / decisions / episodes / artifacts) instead of undifferentiated blobs.</div>
+      </details>
+      <details>
+        <summary><span class="qn">Q.05</span><span>Why is the moat compression?</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div>Storage is a commodity (SQLite). The hard part is turning a year of conversations into the right 1,500 tokens for <em>this</em> task. That's the engineering.</div>
+      </details>
+      <details>
+        <summary><span class="qn">Q.06</span><span>What about Windows?</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div>Anchor runs on Windows (Node 20+). The 0700 / 0600 permission tightening only applies on POSIX; on Windows we rely on inherited NTFS ACLs.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="flourish"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg></div>
+
+<!-- 12. FOOTER -->
+<footer class="footer" data-screen-label="12 Footer">
+  <div class="footer-rows">
+    <div class="footer-top">
+      <div class="footer-mark-col">
+        <div class="footer-mark">Anchor<span class="dot">.</span></div>
+        <div class="footer-mark-meta">№ 001 / 2026 · MIT · v0.0.1</div>
+      </div>
+      <div class="footer-col">
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/priyank766/anchor" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://www.npmjs.com/package/@anchormem/anchor" target="_blank" rel="noopener">npm</a></li>
+          <li><a href="https://github.com/priyank766/anchor/blob/main/LICENSE" target="_blank" rel="noopener">LICENSE</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="#install" class="no-arrow">Quick start</a></li>
+          <li><a href="https://github.com/priyank766/anchor/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a></li>
+          <li><a href="https://github.com/priyank766/anchor/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>About</h4>
+        <ul>
+          <li><span>MIT-licensed</span></li>
+          <li><span>v0.0.1</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer-sig">Built with care by <a href="https://priyank.is-a.dev/" target="_blank" rel="noopener">Priyank Patel<svg class="glyph-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2.5"/><path d="M12 21V6.5"/><path d="M5 11h14"/><path d="M3 14.5c0 4.5 4 8 9 8s9-3.5 9-8"/></svg></a>.</p>
+
+    <p class="easter-egg" aria-live="polite">— thank you for reading —</p>
+
+    <p class="footer-fine">
+      <span>© 2026 Anchor contributors · Open source under MIT</span>
+      <a href="https://github.com/priyank766/anchor" target="_blank" rel="noopener">github.com/priyank766/anchor ↗</a>
+    </p>
+  </div>
+</footer>
+
+<script src="scripts/main.js" defer></script>
+</body>
+</html>
