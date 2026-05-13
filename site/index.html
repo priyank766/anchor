@@ -1,938 +1,1558 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Anchor — Cross-agent memory for AI coding agents</title>
-<meta name="description" content="Local-first MCP server. Switch agents and your project context comes with you. MIT licensed.">
-<meta name="theme-color" content="#F0E8D6">
-<meta property="og:url" content="https://anchormem.me/">
-<meta property="og:image" content="/assets/og.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#F0E8D6;
-    --surface:#E8DEC8;
-    --ink:#1A140C;
-    --ink-muted:#5C4A32;
-    --accent:#2A4A3A;
-    --accent-light:#4A7A5A;
-    --rule:#C8B898;
-    --rule-soft:#D9CDB1;
-    --code-bg:#1E1810;
-    --code-fg:#E8D8B0;
-    --code-green:#7EC8A0;
-    --code-muted:#8A7A5A;
-    --code-amber:#E0B070;
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Anchor</title>
+  <meta name="description"
+    content="Local-first MCP server. Switch agents and your project context comes with you. MIT licensed.">
+  <meta name="theme-color" content="#F0E8D6">
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23F0E8D6'/%3E%3Cg fill='none' stroke='%232A4A3A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='5' r='2.2'/%3E%3Cpath d='M12 7.2v13.6'/%3E%3Cpath d='M7 11h10'/%3E%3Cpath d='M4.5 14.5c0 3.5 3 6.3 7.5 6.3s7.5-2.8 7.5-6.3'/%3E%3Cpath d='M2.5 14.5h4'/%3E%3Cpath d='M17.5 14.5h4'/%3E%3C/g%3E%3C/svg%3E">
+  <meta property="og:url" content="https://anchormem.me/">
+  <meta property="og:image" content="/assets/og.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F0E8D6;
+      --surface: #E8DEC8;
+      --ink: #1A140C;
+      --ink-muted: #5C4A32;
+      --accent: #2A4A3A;
+      --accent-light: #4A7A5A;
+      --rule: #C8B898;
+      --rule-soft: #D9CDB1;
+      --code-bg: #1E1810;
+      --code-fg: #E8D8B0;
+      --code-green: #7EC8A0;
+      --code-muted: #8A7A5A;
+      --code-amber: #E0B070;
 
-    --font-display:'Cormorant Garamond', Georgia, serif;
-    --font-body:'Lora', Georgia, serif;
-    --font-mono:'JetBrains Mono','Fira Code', ui-monospace, monospace;
-    --font-label:'DM Mono', ui-monospace, monospace;
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-body: 'Lora', Georgia, serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+      --font-label: 'DM Mono', ui-monospace, monospace;
 
-    --frame: clamp(1.25rem, 3.5vw, 3rem);   /* outer page frame */
-    --max:   1480px;                         /* outer max width */
-    --gutter: clamp(1.25rem, 4vw, 3.5rem);   /* inner column padding */
+      --frame: clamp(1.25rem, 3.5vw, 3rem);
+      /* outer page frame */
+      --max: 1480px;
+      /* outer max width */
+      --gutter: clamp(1.25rem, 4vw, 3.5rem);
+      /* inner column padding */
 
-    /* palettes — swapped by data-theme on <html> */
-    --palette-active:#2A4A3A;
-  }
-  html[data-theme="forest"]{--accent:#2A4A3A;--accent-light:#4A7A5A;--palette-active:#2A4A3A}
-  html[data-theme="ember"]{--accent:#B0462E;--accent-light:#C56445;--palette-active:#B0462E}
-  html[data-theme="ink"]{--accent:#27384F;--accent-light:#42587A;--palette-active:#27384F}
-  html[data-theme="plum"]{--accent:#6B3658;--accent-light:#8A5478;--palette-active:#6B3658}
-  :root{
-    --__noop:0; /* sentinel */
-  }
+      /* palettes — swapped by data-theme on <html> */
+      --palette-active: #2A4A3A;
+    }
 
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink)}
-  body{
-    font-family:var(--font-body);
-    font-size:1.05rem;
-    line-height:1.7;
-    -webkit-font-smoothing:antialiased;
-    text-rendering:optimizeLegibility;
-    position:relative;
-    min-height:100vh;
-  }
-  ::selection{background:var(--accent);color:var(--bg)}
+    html[data-theme="forest"] {
+      --accent: #2A4A3A;
+      --accent-light: #4A7A5A;
+      --palette-active: #2A4A3A
+    }
 
-  /* subtle paper noise */
-  body::before{
-    content:"";
-    position:fixed;inset:0;
-    pointer-events:none;
-    z-index:0;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.08  0 0 0 0 0.05  0 0 0 0.16 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
-    opacity:0.55;
-    mix-blend-mode:multiply;
-  }
+    html[data-theme="ember"] {
+      --accent: #B0462E;
+      --accent-light: #C56445;
+      --palette-active: #B0462E
+    }
 
-  /* viewport-anchored register marks (corners of the literal screen) */
-  .vp-corner{
-    position:fixed;
-    width:18px;height:18px;
-    color:var(--ink-muted);
-    background:
-      linear-gradient(currentColor,currentColor) center / 100% 1px no-repeat,
-      linear-gradient(currentColor,currentColor) center / 1px 100% no-repeat;
-    opacity:0.5;
-    pointer-events:none;
-    z-index:5;
-  }
-  .vp-corner.tl{top:14px;left:14px}
-  .vp-corner.tr{top:14px;right:14px}
-  .vp-corner.bl{bottom:14px;left:14px}
-  .vp-corner.br{bottom:14px;right:14px}
+    html[data-theme="ink"] {
+      --accent: #27384F;
+      --accent-light: #42587A;
+      --palette-active: #27384F
+    }
 
-  a{color:var(--accent);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;transition:color 200ms ease,text-decoration-color 200ms ease}
-  a:hover{color:var(--accent-light);text-decoration-color:var(--accent-light)}
-  em{font-style:italic}
+    html[data-theme="plum"] {
+      --accent: #6B3658;
+      --accent-light: #8A5478;
+      --palette-active: #6B3658
+    }
 
-  /* ===== PAGE FRAME ===== */
-  .page{
-    position:relative;
-    max-width:var(--max);
-    margin:0 auto;
-    padding:var(--frame) var(--frame) calc(var(--frame) + 1rem);
-    z-index:1;
-  }
-  .wrap{
-    border-left:1px solid var(--rule);
-    border-right:1px solid var(--rule);
-    padding:0 var(--gutter);
-  }
+    :root {
+      --__noop: 0;
+      /* sentinel */
+    }
 
-  /* ===== MASTHEAD / NAV ===== */
-  .masthead{
-    display:grid;
-    grid-template-columns: auto 1fr auto;
-    align-items:center;
-    gap:1.5rem;
-    padding:1.4rem 0 1.1rem;
-    border-bottom:1px solid var(--rule);
-  }
-  .brand{
-    display:inline-flex;align-items:center;gap:0.7rem;
-    font-family:var(--font-label);
-    font-size:0.95rem;
-    letter-spacing:0.22em;
-    color:var(--ink);
-    text-transform:uppercase;
-    text-decoration:none;
-  }
-  .brand-mark{
-    display:inline-flex;align-items:center;justify-content:center;
-    width:32px;height:32px;
-    background:var(--surface);
-    border:1px solid var(--rule);
-    border-radius:6px;
-    color:var(--accent);
-  }
-  .brand-mark svg{width:18px;height:18px;display:block}
-  .tagline{
-    font-family:var(--font-body);
-    font-style:italic;
-    color:var(--ink-muted);
-    font-size:0.98rem;
-  }
-  .issue{
-    font-family:var(--font-label);
-    font-size:0.78rem;
-    text-transform:uppercase;
-    letter-spacing:0.22em;
-    color:var(--ink-muted);
-  }
-  .issue b{color:var(--accent);font-weight:500}
+    * {
+      box-sizing: border-box
+    }
 
-  .subnav{
-    display:flex;align-items:center;gap:1.5rem;
-    padding:0.7rem 0;
-    border-bottom:1px solid var(--rule);
-    font-family:var(--font-label);
-    font-size:0.72rem;
-    text-transform:uppercase;
-    letter-spacing:0.16em;
-    color:var(--ink-muted);
-  }
-  .subnav .links{margin-left:auto;display:flex;gap:1.5rem;align-items:center}
-  .subnav a{color:var(--ink-muted);text-decoration:none}
-  .subnav a:hover{color:var(--ink)}
-  .subnav .install-btn{
-    background:var(--ink); color:var(--bg);
-    padding:0.45rem 0.85rem; border-radius:4px;
-    letter-spacing:0.16em;
-  }
-  .subnav .install-btn:hover{background:var(--accent);color:var(--bg)}
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--ink)
+    }
 
-  /* ===== SECTION GRID ===== */
-  section{padding:4rem 0;position:relative}
-  .row{
-    display:grid;
-    grid-template-columns: 5.5rem minmax(0,1fr);
-    gap:0 2rem;
-    align-items:start;
-  }
-  .row .marker{
-    grid-column:1;
-    font-family:var(--font-label);
-    font-size:0.72rem;
-    text-transform:uppercase;
-    letter-spacing:0.18em;
-    color:var(--ink-muted);
-    padding-top:1.1rem;
-    text-align:right;
-  }
-  .row .body{grid-column:2;min-width:0}
+    body {
+      font-family: var(--font-body);
+      font-size: 1.05rem;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      position: relative;
+      min-height: 100vh;
+    }
 
-  h1.hero{
-    font-family:var(--font-display);
-    font-weight:600;
-    font-size:clamp(3.2rem, 9vw, 8.5rem);
-    line-height:0.92;
-    letter-spacing:-0.035em;
-    margin:0 0 1.5rem;
-    color:var(--ink);
-    text-wrap:balance;
-  }
-  h1.hero em{font-style:italic;color:var(--accent);font-weight:600}
+    ::selection {
+      background: var(--accent);
+      color: var(--bg)
+    }
 
-  h2{
-    font-family:var(--font-display);
-    font-weight:600;
-    font-size:clamp(1.9rem, 4vw, 3rem);
-    line-height:1.05;
-    letter-spacing:-0.02em;
-    margin:0 0 1.1rem;
-    color:var(--ink);
-    text-wrap:balance;
-  }
-  h2 em{font-style:italic;color:var(--accent)}
+    /* subtle paper noise */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.08  0 0 0 0 0.05  0 0 0 0.16 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
+      opacity: 0.55;
+      mix-blend-mode: multiply;
+    }
 
-  p{margin:0 0 1.1rem;color:var(--ink);text-wrap:pretty;max-width:62ch}
-  p.lede{font-size:1.18rem;line-height:1.6;color:var(--ink-muted);max-width:62ch}
-  .muted{color:var(--ink-muted)}
+    /* viewport-anchored register marks (corners of the literal screen) */
+    .vp-corner {
+      position: fixed;
+      width: 18px;
+      height: 18px;
+      color: var(--ink-muted);
+      background:
+        linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat,
+        linear-gradient(currentColor, currentColor) center / 1px 100% no-repeat;
+      opacity: 0.5;
+      pointer-events: none;
+      z-index: 5;
+    }
 
-  hr.rule{
-    border:none;border-top:1px solid var(--rule);
-    margin:0;
-  }
+    .vp-corner.tl {
+      top: 14px;
+      left: 14px
+    }
 
-  /* ===== HERO ===== */
-  .hero-section{padding-top:5rem;padding-bottom:3.5rem}
-  h1.hero{margin-bottom:0}
-  .hero-below{
-    display:grid;
-    grid-template-columns: minmax(0,1fr) minmax(280px, 26rem);
-    gap:2.5rem 4rem;
-    align-items:start;
-    margin-top:4rem;
-  }
-  .hero-actions{padding-top:0.25rem}
-  .hero-note .marker{
-    font-family:var(--font-label);
-    font-size:0.72rem;
-    text-transform:uppercase;
-    letter-spacing:0.18em;
-    color:var(--ink-muted);
-    margin-bottom:1.1rem;
-  }
-  .hero-note p{font-size:1.05rem;line-height:1.65;color:var(--ink);max-width:38ch}
-  .hero-note p.note{font-style:italic;color:var(--ink-muted);margin-bottom:0}
+    .vp-corner.tr {
+      top: 14px;
+      right: 14px
+    }
 
-  .cta-row{
-    display:flex;flex-wrap:wrap;gap:0.9rem 1rem;align-items:stretch;
-  }
-  .btn{
-    position:relative;
-    font-family:var(--font-label);
-    font-size:0.86rem;
-    font-weight:500;
-    text-transform:none;
-    letter-spacing:0.01em;
-    padding:0.85rem 1.25rem;
-    text-decoration:none;
-    border:1.5px solid var(--ink);
-    background:var(--ink);
-    color:var(--bg);
-    border-radius:3px;
-    display:inline-flex;align-items:center;gap:0.6rem;
-    line-height:1;
-    margin:0 8px 8px 0;
-    box-shadow:6px 6px 0 var(--accent);
-    transition:transform 220ms cubic-bezier(0.3,0.7,0.4,1.5),
-               box-shadow 220ms cubic-bezier(0.3,0.7,0.4,1.5);
-  }
-  .btn:hover{
-    transform:translate(-2px,-2px);
-    box-shadow:8px 8px 0 var(--accent);
-  }
-  .btn:active{
-    transform:translate(3px,3px);
-    box-shadow:1px 1px 0 var(--accent);
-    transition-duration:80ms;
-  }
-  .btn.ghost{
-    background:transparent;
-    color:var(--ink);
-    border-color:var(--ink);
-    box-shadow:6px 6px 0 var(--ink);
-  }
-  .btn.ghost:hover{
-    background:rgba(26,20,12,0.03);
-    box-shadow:8px 8px 0 var(--ink);
-  }
-  .btn.ghost:active{box-shadow:1px 1px 0 var(--ink)}
-  .btn .arrow{font-weight:500;font-size:0.95em;line-height:1}
-  .btn .version{
-    font-family:var(--font-label);
-    font-size:0.92em;
-    opacity:0.55;
-    margin-left:0.1rem;
-  }
-  .btn .dot{opacity:0.4;margin:0 0.05rem}
+    .vp-corner.bl {
+      bottom: 14px;
+      left: 14px
+    }
 
-  /* inline install copy line under buttons */
-  .inline-install{
-    display:flex;align-items:center;gap:0.75rem;
-    margin-top:1.1rem;
-    font-family:var(--font-label);
-    font-size:0.82rem;
-    color:var(--ink-muted);
-    letter-spacing:0.04em;
-    flex-wrap:wrap;
-  }
-  .inline-install code{
-    font-family:var(--font-mono);
-    background:var(--bg);
-    border:1px solid var(--rule);
-    color:var(--ink);
-    padding:0.55rem 0.8rem;
-    border-radius:3px;
-    font-size:0.86rem;
-    letter-spacing:0;
-  }
-  .inline-install .mini-copy{
-    background:var(--ink); color:var(--bg);
-    border:none;
-    padding:0.6rem 0.85rem;
-    font-family:var(--font-label);
-    font-size:0.72rem;
-    letter-spacing:0.16em;
-    text-transform:uppercase;
-    cursor:pointer;
-    border-radius:3px;
-    transition:background 180ms;
-  }
-  .inline-install .mini-copy:hover{background:var(--accent)}
-  .inline-install .mini-copy.copied{background:var(--accent-light)}
+    .vp-corner.br {
+      bottom: 14px;
+      right: 14px
+    }
 
-  /* ===== STAT CARD ===== */
-  .stat-card{
-    border:1px solid var(--rule);
-    background:var(--surface);
-    padding:2rem 2.2rem;
-    margin-top:2rem;
-    display:grid;
-    grid-template-columns: 1fr 1.6fr;
-    gap:2.5rem;
-    align-items:center;
-  }
-  .stat-card .big{
-    font-family:var(--font-display);
-    font-weight:600;
-    font-size:clamp(3.5rem,8vw,5.5rem);
-    line-height:0.95;
-    letter-spacing:-0.04em;
-    color:var(--accent);
-    font-style:italic;
-  }
-  .stat-card .desc{font-size:1rem;line-height:1.55;color:var(--ink);max-width:48ch;margin:0 0 0.7rem}
-  .stat-card .attrib{
-    font-family:var(--font-label);
-    font-size:0.68rem;
-    text-transform:uppercase;
-    letter-spacing:0.16em;
-    color:var(--ink-muted);
-  }
+    /* ===== BACKGROUND ANCHOR WATERMARK ===== */
+    .bg-anchor {
+      position: fixed;
+      right: -10vw;
+      bottom: -10vh;
+      width: 70vw;
+      height: 70vw;
+      max-width: 800px;
+      max-height: 800px;
+      color: var(--accent);
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 0;
+      transform: rotate(-15deg);
+    }
 
-  /* ===== TERMINALS ===== */
-  .terminal{
-    background:var(--code-bg);
-    color:var(--code-fg);
-    border-radius:10px;
-    overflow:hidden;
-    font-family:var(--font-mono);
-    font-size:0.88rem;
-    line-height:1.65;
-    box-shadow:0 1px 0 var(--rule), 0 24px 40px -28px rgba(20,15,8,0.25);
-  }
-  .terminal-head{
-    display:grid;
-    grid-template-columns: auto 1fr auto;
-    align-items:center;
-    padding:0.55rem 0.9rem;
-    background:#15110A;
-    border-bottom:1px solid #2a2218;
-  }
-  .lights{display:inline-flex;gap:0.4rem}
-  .lights i{width:11px;height:11px;border-radius:50%;display:inline-block}
-  .lights i:nth-child(1){background:#E36456}
-  .lights i:nth-child(2){background:#E5B244}
-  .lights i:nth-child(3){background:#5BC25A}
-  .term-title{
-    text-align:center;
-    font-family:var(--font-label);
-    font-size:0.7rem;
-    color:var(--code-muted);
-    letter-spacing:0.1em;
-  }
-  .term-badge{
-    font-family:var(--font-label);
-    font-size:0.62rem;
-    color:var(--code-muted);
-    text-transform:uppercase;
-    letter-spacing:0.18em;
-    border:1px solid #3a2f1d;
-    padding:0.18rem 0.5rem;
-    border-radius:3px;
-    cursor:pointer;
-    background:transparent;
-    transition:color 180ms, border-color 180ms;
-  }
-  .term-badge:hover{color:var(--code-fg);border-color:#5a4a30}
-  .term-badge.copied{color:var(--code-green);border-color:#345040}
-  .terminal-body{
-    padding:1.1rem 1.2rem 1.25rem;
-    overflow-x:auto;
-    white-space:pre;
-    margin:0;
-  }
-  .terminal-body .prompt{color:var(--code-amber)}
-  .terminal-body .comment{color:var(--code-muted)}
-  .terminal-body .dim{color:var(--code-muted)}
-  .terminal-body .green{color:var(--code-green)}
-  .terminal-body .bright{color:#F4E8C0}
-  .terminal-body .cursor{
-    display:inline-block;width:0.55em;height:1.1em;background:var(--code-amber);
-    vertical-align:-0.18em;margin-left:1px;animation:blink 1.05s steps(2) infinite;
-  }
-  @keyframes blink{50%{opacity:0}}
+    a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      text-decoration-thickness: 1px;
+      transition: color 200ms ease, text-decoration-color 200ms ease
+    }
 
-  /* A/B Demo + connector */
-  .ab-wrap{margin-top:0.7rem}
-  .ab-block{margin-bottom:0}
-  .ab-label{
-    font-family:var(--font-label);
-    font-size:0.72rem;
-    text-transform:uppercase;
-    letter-spacing:0.18em;
-    color:var(--ink-muted);
-    margin:0 0 0.6rem 0.1rem;
-    display:flex;align-items:center;gap:0.5rem;
-  }
-  .ab-label .dot{width:7px;height:7px;border-radius:50%;background:var(--rule)}
-  .ab-block.with .ab-label .dot{background:var(--accent)}
-  .ab-block.with .ab-label{color:var(--accent)}
+    a:hover {
+      color: var(--accent-light);
+      text-decoration-color: var(--accent-light)
+    }
 
-  /* connector strip with anchor icon between terminals */
-  .ab-connector{
-    display:flex;align-items:center;gap:0.9rem;
-    margin:1rem 0;
-    color:var(--accent);
-  }
-  .ab-connector .dash{
-    flex:1;
-    background-image:linear-gradient(to right, currentColor 50%, transparent 50%);
-    background-size: 12px 1.5px;
-    background-repeat:repeat-x;
-    background-position:left center;
-    height:2px;
-  }
-  .ab-connector .anchor-icon{
-    display:inline-flex;align-items:center;justify-content:center;
-    background:var(--bg);
-    border:1.5px solid var(--accent);
-    padding:0.35rem;
-    border-radius:50%;
-  }
-  .ab-connector .anchor-icon svg{width:16px;height:16px;display:block}
-  .ab-connector .tag{
-    font-family:var(--font-label);
-    font-size:0.7rem;
-    text-transform:uppercase;
-    letter-spacing:0.16em;
-    background:var(--bg);
-    border:1.5px solid var(--accent);
-    padding:0.35rem 0.75rem;
-    border-radius:3px;
-    color:var(--accent);
-  }
-  .ab-connector .tag b{color:var(--ink);font-weight:500}
-  .ab-caption{
-    font-style:italic;color:var(--ink-muted);
-    font-size:1rem;margin-top:1.4rem;max-width:64ch;
-  }
+    em {
+      font-style: italic
+    }
 
-  /* ===== MEMORY TYPES (numbered editorial) ===== */
-  .mem-list{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:2.4rem 3rem;
-    margin-top:1.6rem;
-  }
-  .mem-item{position:relative;padding-left:0}
-  .mem-item .nm{
-    display:flex;align-items:baseline;gap:0.7rem;margin-bottom:0.55rem;
-  }
-  .mem-item .num{
-    font-family:var(--font-label);
-    font-size:0.78rem;
-    color:var(--accent);
-    letter-spacing:0.08em;
-    font-weight:500;
-  }
-  .mem-item h3{
-    font-family:var(--font-display);
-    font-weight:600;
-    font-size:1.55rem;
-    margin:0;
-    letter-spacing:-0.01em;
-    line-height:1.1;
-    color:var(--ink);
-  }
-  .mem-item h3 em{font-style:italic;color:var(--accent)}
-  .mem-item .ex{
-    font-family:var(--font-mono);
-    font-size:0.84rem;
-    color:var(--ink);
-    background:var(--surface);
-    border:1px solid var(--rule);
-    padding:0.55rem 0.75rem;
-    border-radius:4px;
-    margin:0.6rem 0 0.7rem;
-    display:inline-block;
-    max-width:100%;
-    word-break:break-word;
-  }
-  .mem-item p{margin:0;color:var(--ink-muted);font-size:1rem;line-height:1.55}
-  .mem-extras{
-    margin-top:2rem;
-    padding-top:1.5rem;
-    border-top:1px solid var(--rule-soft);
-    color:var(--ink);
-    font-size:1.05rem;
-    max-width:62ch;
-  }
-  .mem-extras code, .inline-code{
-    font-family:var(--font-mono);
-    background:var(--surface);
-    padding:1px 6px;
-    border-radius:3px;
-    font-size:0.86em;
-    color:var(--ink);
-    border:1px solid var(--rule);
-  }
+    /* ===== PAGE FRAME ===== */
+    .page {
+      position: relative;
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: var(--frame) var(--frame) calc(var(--frame) + 1rem);
+      z-index: 1;
+    }
 
-  /* ===== ARCHITECTURE ===== */
-  .arch{
-    margin-top:1.4rem;
-    background:transparent;
-    padding:0;
-  }
-  .arch-row{display:flex;flex-wrap:wrap;justify-content:center;gap:0.55rem;margin-bottom:0.4rem}
-  .arch-chip{
-    font-family:var(--font-label);
-    font-size:0.68rem;
-    text-transform:uppercase;
-    letter-spacing:0.14em;
-    color:var(--ink);
-    background:var(--surface);
-    border:1px solid var(--rule);
-    padding:0.5rem 0.85rem;
-    border-radius:3px;
-  }
-  .arch-arrows{
-    display:flex;justify-content:center;color:var(--accent);
-    font-family:var(--font-mono);font-size:0.9rem;line-height:1;margin:0.6rem 0;
-    letter-spacing:0.5em;opacity:0.7;
-  }
-  .arch-server{
-    margin:0.5rem auto;
-    max-width:600px;
-    border:1.5px solid var(--accent);
-    background:var(--bg);
-    border-radius:4px;
-    padding:1.1rem 1.3rem;
-    text-align:center;
-    position:relative;
-  }
-  .arch-server .stamp{
-    position:absolute;top:0.6rem;right:0.7rem;
-    font-family:var(--font-label);
-    font-size:0.6rem;
-    color:var(--accent);
-    letter-spacing:0.18em;
-  }
-  .arch-server .name{
-    font-family:var(--font-display);
-    font-weight:600;
-    font-size:1.55rem;
-    color:var(--ink);
-    margin-bottom:0.35rem;
-    letter-spacing:-0.015em;
-  }
-  .arch-server .name em{font-style:italic;color:var(--accent)}
-  .arch-server .tools{
-    font-family:var(--font-mono);
-    font-size:0.85rem;
-    color:var(--ink-muted);
-  }
-  .arch-server .tools b{color:var(--accent);font-weight:600}
-  .arch-branch{
-    display:grid;
-    grid-template-columns:1fr 1fr 1fr;
-    gap:0.8rem;
-    margin-top:0.9rem;
-  }
-  .arch-leaf{
-    border:1px solid var(--rule);
-    background:var(--surface);
-    padding:0.95rem 1rem;
-    border-radius:3px;
-    min-height:88px;
-  }
-  .arch-leaf .lbl{
-    font-family:var(--font-label);
-    font-size:0.62rem;
-    text-transform:uppercase;
-    letter-spacing:0.16em;
-    color:var(--ink-muted);
-    margin-bottom:0.4rem;
-  }
-  .arch-leaf .val{
-    font-family:var(--font-mono);
-    font-size:0.84rem;
-    color:var(--ink);
-    line-height:1.45;
-  }
-  .arch-leaf.badge-leaf{
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    background:var(--accent);
-    border-color:var(--accent);
-    color:var(--bg);
-    text-align:center;
-  }
-  .arch-leaf.badge-leaf .lbl{color:rgba(240,232,214,0.7)}
-  .arch-leaf.badge-leaf .val{color:var(--bg);font-family:var(--font-display);font-size:1.5rem;font-weight:600;letter-spacing:-0.01em}
+    .wrap {
+      border-left: 1px solid var(--rule);
+      border-right: 1px solid var(--rule);
+      padding: 0 var(--gutter);
+    }
 
-  /* ===== TABLE ===== */
-  .bench-wrap{margin-top:1rem}
-  table.bench{
-    width:100%;
-    border-collapse:collapse;
-    font-family:var(--font-body);
-  }
-  table.bench th, table.bench td{
-    padding:0.8rem 1rem;
-    text-align:right;
-    font-family:var(--font-mono);
-    font-size:0.92rem;
-    color:var(--ink);
-    border:none;
-  }
-  table.bench th{
-    font-family:var(--font-label);
-    font-size:0.66rem;
-    text-transform:uppercase;
-    letter-spacing:0.14em;
-    color:var(--ink-muted);
-    border-bottom:1px solid var(--rule);
-    padding-bottom:0.8rem;
-  }
-  table.bench th:first-child, table.bench td:first-child{text-align:left}
-  table.bench tbody tr:nth-child(odd) td{background:var(--bg)}
-  table.bench tbody tr:nth-child(even) td{background:var(--surface)}
-  table.bench td.p95, table.bench th.p95{color:var(--accent);font-weight:600;font-style:italic}
-  .bench-caption{
-    font-style:italic;
-    color:var(--ink-muted);
-    margin-top:1.2rem;
-    font-size:1rem;
-    max-width:64ch;
-  }
-  .bench-foot{
-    font-family:var(--font-label);
-    font-size:0.66rem;
-    text-transform:uppercase;
-    letter-spacing:0.16em;
-    color:var(--ink-muted);
-    margin-top:0.5rem;
-  }
+    /* ===== MASTHEAD / NAV ===== */
+    .masthead {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 1.4rem 0 1.1rem;
+      border-bottom: 1px solid var(--rule);
+    }
 
-  /* ===== MARQUEE ===== */
-  .marquee{
-    overflow:hidden;
-    margin:1.5rem 0 1rem;
-    padding:1.1rem 0;
-    border-top:1px solid var(--rule);
-    border-bottom:1px solid var(--rule);
-    -webkit-mask-image:linear-gradient(to right, transparent, black 8%, black 92%, transparent);
-            mask-image:linear-gradient(to right, transparent, black 8%, black 92%, transparent);
-  }
-  .marquee-track{
-    display:inline-flex;white-space:nowrap;
-    animation:scroll 40s linear infinite;
-    font-family:var(--font-label);
-    font-size:0.88rem;
-    text-transform:uppercase;
-    letter-spacing:0.22em;
-    color:var(--ink);
-  }
-  .marquee-track span{padding-right:2rem}
-  @keyframes scroll{
-    from{transform:translateX(0)}
-    to{transform:translateX(-50%)}
-  }
-  .marquee-caption{
-    font-style:italic;color:var(--ink-muted);font-size:1rem;text-align:center;
-  }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      font-family: var(--font-label);
+      font-size: 0.95rem;
+      letter-spacing: 0.22em;
+      color: var(--ink);
+      text-transform: uppercase;
+      text-decoration: none;
+    }
 
-  /* ===== QUICK START ===== */
-  .step{margin-top:2.2rem}
-  .step:first-child{margin-top:1rem}
-  .step-head{display:flex;align-items:baseline;gap:1rem;margin-bottom:0.85rem}
-  .step-num{
-    font-family:var(--font-label);
-    font-size:0.95rem;
-    color:var(--accent);
-    letter-spacing:0.08em;flex-shrink:0;font-weight:500;
-  }
-  .step-title{
-    font-family:var(--font-display);
-    font-weight:500;
-    font-size:1.45rem;
-    color:var(--ink);
-    letter-spacing:-0.015em;
-    line-height:1.1;
-  }
-  .step-title em{font-style:italic;color:var(--accent)}
-  .step-links{margin-top:2.4rem;display:flex;flex-wrap:wrap;gap:1.5rem 2rem}
-  .text-link{
-    font-family:var(--font-label);
-    font-size:0.74rem;
-    text-transform:uppercase;
-    letter-spacing:0.16em;
-    color:var(--ink);
-    text-decoration:none;
-    border-bottom:1px solid var(--rule);
-    padding-bottom:0.25rem;
-    transition:border-color 200ms ease,color 200ms ease;
-  }
-  .text-link:hover{color:var(--accent);border-color:var(--accent)}
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      color: var(--accent);
+    }
 
-  /* trust */
-  #trust p{font-size:1.07rem;line-height:1.65;max-width:64ch}
+    .brand-mark svg {
+      width: 18px;
+      height: 18px;
+      display: block
+    }
 
-  /* ===== FOOTER ===== */
-  footer{
-    margin-top:3rem;
-    border-top:1px solid var(--rule);
-    padding:3rem 0 1.5rem;
-  }
-  .foot-top{
-    display:flex;align-items:baseline;justify-content:space-between;gap:2rem;
-    margin-bottom:2.5rem;flex-wrap:wrap;
-  }
-  .foot-brand{
-    display:inline-flex;align-items:center;gap:0.7rem;
-    font-family:var(--font-display);
-    font-weight:600;
-    font-size:2.2rem;
-    color:var(--ink);
-    letter-spacing:-0.015em;
-  }
-  .foot-issue{
-    font-family:var(--font-label);
-    font-size:0.74rem;
-    text-transform:uppercase;
-    letter-spacing:0.18em;
-    color:var(--ink-muted);
-  }
-  .foot-cols{
-    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2rem;margin-bottom:2.5rem;
-  }
-  .foot-cols h4{
-    font-family:var(--font-label);
-    font-size:0.7rem;
-    text-transform:uppercase;
-    letter-spacing:0.16em;
-    color:var(--ink-muted);
-    margin:0 0 0.9rem;font-weight:500;
-  }
-  .foot-cols ul{list-style:none;margin:0;padding:0}
-  .foot-cols li{margin:0.35rem 0}
-  .foot-cols a, .foot-cols span{
-    font-family:var(--font-label);
-    font-size:0.82rem;color:var(--ink);text-decoration:none;letter-spacing:0.04em;
-  }
-  .foot-cols a:hover{color:var(--accent)}
-  .foot-attrib{font-style:italic;color:var(--ink-muted);margin:0 0 0.4rem}
-  .foot-attrib a{font-style:normal}
-  .foot-attrib .no-underline{font-style:normal;color:var(--ink-muted);text-decoration:none;display:inline-block}
-  .foot-thanks{font-style:italic;color:var(--ink-muted);margin:0 0 1.5rem;font-size:1.02rem}
-  .foot-copy{
-    font-family:var(--font-label);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-muted);
-  }
+    .tagline {
+      font-family: var(--font-body);
+      font-style: italic;
+      color: var(--ink-muted);
+      font-size: 0.98rem;
+    }
 
-  /* ===== ANIMATION ===== */
-  .reveal{opacity:0;transform:translateY(16px);transition:opacity 400ms ease-out,transform 400ms ease-out}
-  .reveal.in{opacity:1;transform:translateY(0)}
+    .issue {
+      font-family: var(--font-label);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--ink-muted);
+    }
 
-  /* ===== RESPONSIVE ===== */
-  @media (max-width:960px){
-    .hero-below{grid-template-columns:1fr;gap:2.5rem;margin-top:2.5rem}
-    .arch-branch{grid-template-columns:1fr}
-    .foot-cols{grid-template-columns:1fr 1fr}
-    .stat-card{grid-template-columns:1fr;gap:1rem}
-    .mem-list{grid-template-columns:1fr;gap:2rem}
-  }
-  @media (max-width:760px){
-    .row{grid-template-columns:1fr;gap:0.4rem}
-    .row .marker{grid-column:1;text-align:left;padding-top:0}
-    .masthead{grid-template-columns:auto auto;gap:0.8rem}
-    .masthead .tagline{grid-column:1 / -1;font-size:0.92rem}
-    .subnav .links a:not(.install-btn){display:none}
-    section{padding:3rem 0}
-    .step-head{flex-direction:column;gap:0.25rem}
-    .foot-top{flex-direction:column;align-items:flex-start}
-    .foot-cols{grid-template-columns:1fr}
-  }
-  @media (prefers-reduced-motion: reduce){
-    .reveal{opacity:1;transform:none;transition:none}
-    .marquee-track{animation:none}
-    .terminal-body .cursor{animation:none}
-  }
-</style>
+    .issue b {
+      color: var(--accent);
+      font-weight: 500
+    }
+
+    .subnav {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid var(--rule);
+      font-family: var(--font-label);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--ink-muted);
+    }
+
+    .subnav .links {
+      margin-left: auto;
+      display: flex;
+      gap: 1.5rem;
+      align-items: center
+    }
+
+    .subnav a {
+      color: var(--ink-muted);
+      text-decoration: none
+    }
+
+    .subnav a:hover {
+      color: var(--ink)
+    }
+
+    .subnav .install-btn {
+      background: var(--ink);
+      color: var(--bg);
+      padding: 0.45rem 0.85rem;
+      border-radius: 4px;
+      letter-spacing: 0.16em;
+    }
+
+    .subnav .install-btn:hover {
+      background: var(--accent);
+      color: var(--bg)
+    }
+
+    /* ===== SECTION GRID ===== */
+    section {
+      padding: 4rem 0;
+      position: relative
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      gap: 0 2rem;
+      align-items: start;
+    }
+
+    .row .marker {
+      grid-column: 1;
+      font-family: var(--font-label);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--ink-muted);
+      padding-top: 1.1rem;
+      text-align: right;
+    }
+
+    .row .body {
+      grid-column: 2;
+      min-width: 0
+    }
+
+    h1.hero {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: clamp(3.2rem, 9vw, 8.5rem);
+      line-height: 0.92;
+      letter-spacing: -0.035em;
+      margin: 0 0 1.5rem;
+      color: var(--ink);
+      text-wrap: balance;
+    }
+
+    h1.hero em {
+      font-style: italic;
+      color: var(--accent);
+      font-weight: 600
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: clamp(1.9rem, 4vw, 3rem);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin: 0 0 1.1rem;
+      color: var(--ink);
+      text-wrap: balance;
+    }
+
+    h2 em {
+      font-style: italic;
+      color: var(--accent)
+    }
+
+    p {
+      margin: 0 0 1.1rem;
+      color: var(--ink);
+      text-wrap: pretty;
+      max-width: 62ch
+    }
+
+    p.lede {
+      font-size: 1.18rem;
+      line-height: 1.6;
+      color: var(--ink-muted);
+      max-width: 62ch
+    }
+
+    .muted {
+      color: var(--ink-muted)
+    }
+
+    hr.rule {
+      border: none;
+      border-top: 1px solid var(--rule);
+      margin: 0;
+    }
+
+    /* ===== HERO ===== */
+    .hero-section {
+      padding-top: 5rem;
+      padding-bottom: 3.5rem
+    }
+
+    h1.hero {
+      margin-bottom: 0
+    }
+
+    .hero-below {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 26rem);
+      gap: 2.5rem 4rem;
+      align-items: start;
+      margin-top: 4rem;
+    }
+
+    .hero-actions {
+      padding-top: 0.25rem
+    }
+
+    .hero-note .marker {
+      font-family: var(--font-label);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--ink-muted);
+      margin-bottom: 1.1rem;
+    }
+
+    .hero-note p {
+      font-size: 1.05rem;
+      line-height: 1.65;
+      color: var(--ink);
+      max-width: 38ch
+    }
+
+    .hero-note p.note {
+      font-style: italic;
+      color: var(--ink-muted);
+      margin-bottom: 0
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.9rem 1rem;
+      align-items: stretch;
+    }
+
+    .btn {
+      position: relative;
+      font-family: var(--font-label);
+      font-size: 0.86rem;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0.01em;
+      padding: 0.85rem 1.25rem;
+      text-decoration: none;
+      border: 1.5px solid var(--ink);
+      background: var(--ink);
+      color: var(--bg);
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      line-height: 1;
+      margin: 0 8px 8px 0;
+      box-shadow: 6px 6px 0 var(--accent);
+      transition: transform 220ms cubic-bezier(0.3, 0.7, 0.4, 1.5),
+        box-shadow 220ms cubic-bezier(0.3, 0.7, 0.4, 1.5);
+    }
+
+    .btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 8px 8px 0 var(--accent);
+    }
+
+    .btn:active {
+      transform: translate(3px, 3px);
+      box-shadow: 1px 1px 0 var(--accent);
+      transition-duration: 80ms;
+    }
+
+    .btn.ghost {
+      background: transparent;
+      color: var(--ink);
+      border-color: var(--ink);
+      box-shadow: 6px 6px 0 var(--ink);
+    }
+
+    .btn.ghost:hover {
+      background: rgba(26, 20, 12, 0.03);
+      box-shadow: 8px 8px 0 var(--ink);
+    }
+
+    .btn.ghost:active {
+      box-shadow: 1px 1px 0 var(--ink)
+    }
+
+    .btn .arrow {
+      font-weight: 500;
+      font-size: 0.95em;
+      line-height: 1
+    }
+
+    .btn .version {
+      font-family: var(--font-label);
+      font-size: 0.92em;
+      opacity: 0.55;
+      margin-left: 0.1rem;
+    }
+
+    .btn .dot {
+      opacity: 0.4;
+      margin: 0 0.05rem
+    }
+
+    /* inline install copy line under buttons */
+    .inline-install {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 1.1rem;
+      font-family: var(--font-label);
+      font-size: 0.82rem;
+      color: var(--ink-muted);
+      letter-spacing: 0.04em;
+      flex-wrap: wrap;
+    }
+
+    .inline-install code {
+      font-family: var(--font-mono);
+      background: var(--bg);
+      border: 1px solid var(--rule);
+      color: var(--ink);
+      padding: 0.55rem 0.8rem;
+      border-radius: 3px;
+      font-size: 0.86rem;
+      letter-spacing: 0;
+    }
+
+    .inline-install .mini-copy {
+      background: var(--ink);
+      color: var(--bg);
+      border: none;
+      padding: 0.6rem 0.85rem;
+      font-family: var(--font-label);
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: background 180ms;
+    }
+
+    .inline-install .mini-copy:hover {
+      background: var(--accent)
+    }
+
+    .inline-install .mini-copy.copied {
+      background: var(--accent-light)
+    }
+
+    /* ===== STAT CARD ===== */
+    .stat-card {
+      border: 1px solid var(--rule);
+      background: var(--surface);
+      padding: 2rem 2.2rem;
+      margin-top: 2rem;
+      display: grid;
+      grid-template-columns: 1fr 1.6fr;
+      gap: 2.5rem;
+      align-items: center;
+    }
+
+    .stat-card .big {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: clamp(3.5rem, 8vw, 5.5rem);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    .stat-card .desc {
+      font-size: 1rem;
+      line-height: 1.55;
+      color: var(--ink);
+      max-width: 48ch;
+      margin: 0 0 0.7rem
+    }
+
+    .stat-card .attrib {
+      font-family: var(--font-label);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--ink-muted);
+    }
+
+    /* ===== TERMINALS ===== */
+    .terminal {
+      background: var(--code-bg);
+      color: var(--code-fg);
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      line-height: 1.65;
+      box-shadow: 0 1px 0 var(--rule), 0 24px 40px -28px rgba(20, 15, 8, 0.25);
+    }
+
+    .terminal-head {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      padding: 0.55rem 0.9rem;
+      background: #15110A;
+      border-bottom: 1px solid #2a2218;
+    }
+
+    .lights {
+      display: inline-flex;
+      gap: 0.4rem
+    }
+
+    .lights i {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      display: inline-block
+    }
+
+    .lights i:nth-child(1) {
+      background: #E36456
+    }
+
+    .lights i:nth-child(2) {
+      background: #E5B244
+    }
+
+    .lights i:nth-child(3) {
+      background: #5BC25A
+    }
+
+    .term-title {
+      text-align: center;
+      font-family: var(--font-label);
+      font-size: 0.7rem;
+      color: var(--code-muted);
+      letter-spacing: 0.1em;
+    }
+
+    .term-badge {
+      font-family: var(--font-label);
+      font-size: 0.62rem;
+      color: var(--code-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      border: 1px solid #3a2f1d;
+      padding: 0.18rem 0.5rem;
+      border-radius: 3px;
+      cursor: pointer;
+      background: transparent;
+      transition: color 180ms, border-color 180ms;
+    }
+
+    .term-badge:hover {
+      color: var(--code-fg);
+      border-color: #5a4a30
+    }
+
+    .term-badge.copied {
+      color: var(--code-green);
+      border-color: #345040
+    }
+
+    .terminal-body {
+      padding: 1.1rem 1.2rem 1.25rem;
+      overflow-x: auto;
+      white-space: pre;
+      margin: 0;
+    }
+
+    .terminal-body .prompt {
+      color: var(--code-amber)
+    }
+
+    .terminal-body .comment {
+      color: var(--code-muted)
+    }
+
+    .terminal-body .dim {
+      color: var(--code-muted)
+    }
+
+    .terminal-body .green {
+      color: var(--code-green)
+    }
+
+    .terminal-body .bright {
+      color: #F4E8C0
+    }
+
+    .terminal-body .cursor {
+      display: inline-block;
+      width: 0.55em;
+      height: 1.1em;
+      background: var(--code-amber);
+      vertical-align: -0.18em;
+      margin-left: 1px;
+      animation: blink 1.05s steps(2) infinite;
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: 0
+      }
+    }
+
+    /* A/B Demo + connector */
+    .ab-wrap {
+      margin-top: 0.7rem
+    }
+
+    .ab-block {
+      margin-bottom: 0
+    }
+
+    .ab-label {
+      font-family: var(--font-label);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--ink-muted);
+      margin: 0 0 0.6rem 0.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ab-label .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--rule)
+    }
+
+    .ab-block.with .ab-label .dot {
+      background: var(--accent)
+    }
+
+    .ab-block.with .ab-label {
+      color: var(--accent)
+    }
+
+    /* connector strip with anchor icon between terminals */
+    .ab-connector {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      margin: 1rem 0;
+      color: var(--accent);
+    }
+
+    .ab-connector .dash {
+      flex: 1;
+      background-image: linear-gradient(to right, currentColor 50%, transparent 50%);
+      background-size: 12px 1.5px;
+      background-repeat: repeat-x;
+      background-position: left center;
+      height: 2px;
+    }
+
+    .ab-connector .anchor-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      border: 1.5px solid var(--accent);
+      padding: 0.35rem;
+      border-radius: 50%;
+    }
+
+    .ab-connector .anchor-icon svg {
+      width: 16px;
+      height: 16px;
+      display: block
+    }
+
+    .ab-connector .tag {
+      font-family: var(--font-label);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      background: var(--bg);
+      border: 1.5px solid var(--accent);
+      padding: 0.35rem 0.75rem;
+      border-radius: 3px;
+      color: var(--accent);
+    }
+
+    .ab-connector .tag b {
+      color: var(--ink);
+      font-weight: 500
+    }
+
+    .ab-caption {
+      font-style: italic;
+      color: var(--ink-muted);
+      font-size: 1rem;
+      margin-top: 1.4rem;
+      max-width: 64ch;
+    }
+
+    /* ===== MEMORY TYPES (numbered editorial) ===== */
+    .mem-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2.4rem 3rem;
+      margin-top: 1.6rem;
+    }
+
+    .mem-item {
+      position: relative;
+      padding-left: 0
+    }
+
+    .mem-item .nm {
+      display: flex;
+      align-items: baseline;
+      gap: 0.7rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .mem-item .num {
+      font-family: var(--font-label);
+      font-size: 0.78rem;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      font-weight: 500;
+    }
+
+    .mem-item h3 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 1.55rem;
+      margin: 0;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+
+    .mem-item h3 em {
+      font-style: italic;
+      color: var(--accent)
+    }
+
+    .mem-item .ex {
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      padding: 0.55rem 0.75rem;
+      border-radius: 4px;
+      margin: 0.6rem 0 0.7rem;
+      display: inline-block;
+      max-width: 100%;
+      word-break: break-word;
+    }
+
+    .mem-item p {
+      margin: 0;
+      color: var(--ink-muted);
+      font-size: 1rem;
+      line-height: 1.55
+    }
+
+    .mem-extras {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--rule-soft);
+      color: var(--ink);
+      font-size: 1.05rem;
+      max-width: 62ch;
+    }
+
+    .mem-extras code,
+    .inline-code {
+      font-family: var(--font-mono);
+      background: var(--surface);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 0.86em;
+      color: var(--ink);
+      border: 1px solid var(--rule);
+    }
+
+    /* ===== ARCHITECTURE ===== */
+    .arch {
+      margin-top: 1.4rem;
+      background: transparent;
+      padding: 0;
+    }
+
+    .arch-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.55rem;
+      margin-bottom: 0.4rem
+    }
+
+    .arch-chip {
+      font-family: var(--font-label);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      padding: 0.5rem 0.85rem;
+      border-radius: 3px;
+    }
+
+    .arch-arrows {
+      display: flex;
+      justify-content: center;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      line-height: 1;
+      margin: 0.6rem 0;
+      letter-spacing: 0.5em;
+      opacity: 0.7;
+    }
+
+    .arch-server {
+      margin: 0.5rem auto;
+      max-width: 600px;
+      border: 1.5px solid var(--accent);
+      background: var(--bg);
+      border-radius: 4px;
+      padding: 1.1rem 1.3rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .arch-server .stamp {
+      position: absolute;
+      top: 0.6rem;
+      right: 0.7rem;
+      font-family: var(--font-label);
+      font-size: 0.6rem;
+      color: var(--accent);
+      letter-spacing: 0.18em;
+    }
+
+    .arch-server .name {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 1.55rem;
+      color: var(--ink);
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.015em;
+    }
+
+    .arch-server .name em {
+      font-style: italic;
+      color: var(--accent)
+    }
+
+    .arch-server .tools {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--ink-muted);
+    }
+
+    .arch-server .tools b {
+      color: var(--accent);
+      font-weight: 600
+    }
+
+    .arch-branch {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.8rem;
+      margin-top: 0.9rem;
+    }
+
+    .arch-leaf {
+      border: 1px solid var(--rule);
+      background: var(--surface);
+      padding: 0.95rem 1rem;
+      border-radius: 3px;
+      min-height: 88px;
+    }
+
+    .arch-leaf .lbl {
+      font-family: var(--font-label);
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--ink-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .arch-leaf .val {
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      color: var(--ink);
+      line-height: 1.45;
+    }
+
+    .arch-leaf.badge-leaf {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg);
+      text-align: center;
+    }
+
+    .arch-leaf.badge-leaf .lbl {
+      color: rgba(240, 232, 214, 0.7)
+    }
+
+    .arch-leaf.badge-leaf .val {
+      color: var(--bg);
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.01em
+    }
+
+    /* ===== TABLE ===== */
+    .bench-wrap {
+      margin-top: 1rem
+    }
+
+    table.bench {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-body);
+    }
+
+    table.bench th,
+    table.bench td {
+      padding: 0.8rem 1rem;
+      text-align: right;
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      color: var(--ink);
+      border: none;
+    }
+
+    table.bench th {
+      font-family: var(--font-label);
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--ink-muted);
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 0.8rem;
+    }
+
+    table.bench th:first-child,
+    table.bench td:first-child {
+      text-align: left
+    }
+
+    table.bench tbody tr:nth-child(odd) td {
+      background: var(--bg)
+    }
+
+    table.bench tbody tr:nth-child(even) td {
+      background: var(--surface)
+    }
+
+    table.bench td.p95,
+    table.bench th.p95 {
+      color: var(--accent);
+      font-weight: 600;
+      font-style: italic
+    }
+
+    .bench-caption {
+      font-style: italic;
+      color: var(--ink-muted);
+      margin-top: 1.2rem;
+      font-size: 1rem;
+      max-width: 64ch;
+    }
+
+    .bench-foot {
+      font-family: var(--font-label);
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--ink-muted);
+      margin-top: 0.5rem;
+    }
+
+    /* ===== MARQUEE ===== */
+    .marquee {
+      overflow: hidden;
+      margin: 1.5rem 0 1rem;
+      padding: 1.1rem 0;
+      border-top: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+      -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+      mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+    }
+
+    .marquee-track {
+      display: inline-flex;
+      white-space: nowrap;
+      animation: scroll 40s linear infinite;
+      font-family: var(--font-label);
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--ink);
+    }
+
+    .marquee-track span {
+      padding-right: 2rem
+    }
+
+    @keyframes scroll {
+      from {
+        transform: translateX(0)
+      }
+
+      to {
+        transform: translateX(-50%)
+      }
+    }
+
+    .marquee-caption {
+      font-style: italic;
+      color: var(--ink-muted);
+      font-size: 1rem;
+      text-align: center;
+    }
+
+    /* ===== QUICK START ===== */
+    .step {
+      margin-top: 2.2rem
+    }
+
+    .step:first-child {
+      margin-top: 1rem
+    }
+
+    .step-head {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      margin-bottom: 0.85rem
+    }
+
+    .step-num {
+      font-family: var(--font-label);
+      font-size: 0.95rem;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      flex-shrink: 0;
+      font-weight: 500;
+    }
+
+    .step-title {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 1.45rem;
+      color: var(--ink);
+      letter-spacing: -0.015em;
+      line-height: 1.1;
+    }
+
+    .step-title em {
+      font-style: italic;
+      color: var(--accent)
+    }
+
+    .step-links {
+      margin-top: 2.4rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem 2rem
+    }
+
+    .text-link {
+      font-family: var(--font-label);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 0.25rem;
+      transition: border-color 200ms ease, color 200ms ease;
+    }
+
+    .text-link:hover {
+      color: var(--accent);
+      border-color: var(--accent)
+    }
+
+    /* trust */
+    #trust p {
+      font-size: 1.07rem;
+      line-height: 1.65;
+      max-width: 64ch
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      margin-top: 3rem;
+      border-top: 1px solid var(--rule);
+      padding: 3rem 0 1.5rem;
+    }
+
+    .foot-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 2rem;
+      margin-bottom: 2.5rem;
+      flex-wrap: wrap;
+    }
+
+    .foot-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 2.2rem;
+      color: var(--ink);
+      letter-spacing: -0.015em;
+    }
+
+    .foot-issue {
+      font-family: var(--font-label);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--ink-muted);
+    }
+
+    .foot-cols {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 2rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .foot-cols h4 {
+      font-family: var(--font-label);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--ink-muted);
+      margin: 0 0 0.9rem;
+      font-weight: 500;
+    }
+
+    .foot-cols ul {
+      list-style: none;
+      margin: 0;
+      padding: 0
+    }
+
+    .foot-cols li {
+      margin: 0.35rem 0
+    }
+
+    .foot-cols a,
+    .foot-cols span {
+      font-family: var(--font-label);
+      font-size: 0.82rem;
+      color: var(--ink);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+    }
+
+    .foot-cols a:hover {
+      color: var(--accent)
+    }
+
+    .foot-attrib {
+      font-style: italic;
+      color: var(--ink-muted);
+      margin: 0 0 0.4rem
+    }
+
+    .foot-attrib a {
+      font-style: normal
+    }
+
+    .foot-attrib .no-underline {
+      font-style: normal;
+      color: var(--ink-muted);
+      text-decoration: none;
+      display: inline-block
+    }
+
+    .foot-thanks {
+      font-style: italic;
+      color: var(--ink-muted);
+      margin: 0 0 1.5rem;
+      font-size: 1.02rem
+    }
+
+    .foot-copy {
+      font-family: var(--font-label);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--ink-muted);
+    }
+
+    /* ===== ANIMATION ===== */
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 400ms ease-out, transform 400ms ease-out
+    }
+
+    .reveal.in {
+      opacity: 1;
+      transform: translateY(0)
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width:960px) {
+      .hero-below {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+        margin-top: 2.5rem
+      }
+
+      .arch-branch {
+        grid-template-columns: 1fr
+      }
+
+      .foot-cols {
+        grid-template-columns: 1fr 1fr
+      }
+
+      .stat-card {
+        grid-template-columns: 1fr;
+        gap: 1rem
+      }
+
+      .mem-list {
+        grid-template-columns: 1fr;
+        gap: 2rem
+      }
+    }
+
+    @media (max-width:760px) {
+      .row {
+        grid-template-columns: 1fr;
+        gap: 0.4rem
+      }
+
+      .row .marker {
+        grid-column: 1;
+        text-align: left;
+        padding-top: 0
+      }
+
+      .masthead {
+        grid-template-columns: auto auto;
+        gap: 0.8rem
+      }
+
+      .masthead .tagline {
+        grid-column: 1 / -1;
+        font-size: 0.92rem
+      }
+
+      .subnav .links a:not(.install-btn) {
+        display: none
+      }
+
+      section {
+        padding: 3rem 0
+      }
+
+      .step-head {
+        flex-direction: column;
+        gap: 0.25rem
+      }
+
+      .foot-top {
+        flex-direction: column;
+        align-items: flex-start
+      }
+
+      .foot-cols {
+        grid-template-columns: 1fr
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal {
+        opacity: 1;
+        transform: none;
+        transition: none
+      }
+
+      .marquee-track {
+        animation: none
+      }
+
+      .terminal-body .cursor {
+        animation: none
+      }
+    }
+  </style>
 </head>
+
 <body>
 
-<span class="vp-corner tl" aria-hidden="true"></span>
-<span class="vp-corner tr" aria-hidden="true"></span>
-<span class="vp-corner bl" aria-hidden="true"></span>
-<span class="vp-corner br" aria-hidden="true"></span>
+  <span class="vp-corner tl" aria-hidden="true"></span>
+  <span class="vp-corner tr" aria-hidden="true"></span>
+  <span class="vp-corner bl" aria-hidden="true"></span>
+  <span class="vp-corner br" aria-hidden="true"></span>
 
-<div class="page">
-  <div class="wrap">
+  <!-- ===== BACKGROUND ANCHOR DESIGN ===== -->
+  <svg class="bg-anchor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+    stroke-linejoin="round" aria-hidden="true">
+    <circle cx="12" cy="5" r="2.2" />
+    <path d="M12 7.2v13.6" />
+    <path d="M7 11h10" />
+    <path d="M4.5 14.5c0 3.5 3 6.3 7.5 6.3s7.5-2.8 7.5-6.3" />
+    <path d="M2.5 14.5h4" />
+    <path d="M17.5 14.5h4" />
+  </svg>
 
-    <!-- ===== MASTHEAD ===== -->
-    <header class="masthead">
-      <a class="brand" href="#top" id="top">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="5" r="2.2"/>
-            <path d="M12 7.2v13.6"/>
-            <path d="M7 11h10"/>
-            <path d="M4.5 14.5c0 3.5 3 6.3 7.5 6.3s7.5-2.8 7.5-6.3"/>
-            <path d="M2.5 14.5h4"/>
-            <path d="M17.5 14.5h4"/>
-          </svg>
-        </span>
-        Anchor
-      </a>
-      <div class="tagline">a cross-agent memory keeper · for any agent that speaks MCP</div>
-      <div class="issue">No. <b>0.0.1</b> · MMXXVI</div>
-    </header>
+  <div class="page">
+    <div class="wrap">
 
-    <!-- ===== SUBNAV ===== -->
-    <nav class="subnav">
-      <span>§ Cross-agent memory</span>
-      <div class="links">
-        <a href="https://github.com/priyank766/anchor">GitHub</a>
-        <a href="https://npmjs.com/package/@anchormem/anchor">npm</a>
-        <a href="https://github.com/priyank766/anchor/blob/main/SECURITY.md">Security</a>
-        <a class="install-btn" href="#install">↓ Install</a>
-      </div>
-    </nav>
+      <!-- ===== MASTHEAD ===== -->
+      <header class="masthead">
+        <a class="brand" href="#top" id="top">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <circle cx="12" cy="5" r="2.2" />
+              <path d="M12 7.2v13.6" />
+              <path d="M7 11h10" />
+              <path d="M4.5 14.5c0 3.5 3 6.3 7.5 6.3s7.5-2.8 7.5-6.3" />
+              <path d="M2.5 14.5h4" />
+              <path d="M17.5 14.5h4" />
+            </svg>
+          </span>
+          Anchor
+        </a>
+        <div class="tagline">a cross-agent memory keeper · for any agent that speaks MCP</div>
+        <div class="issue">No. <b>0.0.1</b> · MMXXVI</div>
+      </header>
 
-    <main>
-
-      <!-- ===== HERO ===== -->
-      <section class="hero-section">
-        <div class="reveal">
-          <h1 class="hero">Long memory,<br><em>short prompts.</em></h1>
+      <!-- ===== SUBNAV ===== -->
+      <nav class="subnav">
+        <span>§ Cross-agent memory</span>
+        <div class="links">
+          <a href="https://github.com/priyank766/anchor">GitHub</a>
+          <a href="https://npmjs.com/package/@anchormem/anchor">npm</a>
+          <a href="https://github.com/priyank766/anchor/blob/main/SECURITY.md">Security</a>
+          <a class="install-btn" href="#install">↓ Install</a>
         </div>
-        <div class="hero-below reveal">
-          <div class="hero-actions">
-            <div class="cta-row">
-              <a class="btn primary" href="#install">
-                <span class="arrow">↓</span>
-                Install Anchor
-                <span class="dot">·</span>
-                <span class="version">0.0.1</span>
-              </a>
-              <a class="btn ghost" href="https://github.com/priyank766/anchor">View source on GitHub</a>
+      </nav>
+
+      <main>
+
+        <!-- ===== HERO ===== -->
+        <section class="hero-section">
+          <div class="reveal">
+            <h1 class="hero">Long memory,<br><em>short prompts.</em></h1>
+          </div>
+          <div class="hero-below reveal">
+            <div class="hero-actions">
+              <div class="cta-row">
+                <a class="btn primary" href="#install">
+                  <span class="arrow">↓</span>
+                  Install Anchor
+                  <span class="dot">·</span>
+                  <span class="version">0.0.1</span>
+                </a>
+                <a class="btn ghost" href="https://github.com/priyank766/anchor">View source on GitHub</a>
+              </div>
+              <div class="inline-install">
+                <span>or</span>
+                <code id="install-cmd">npx @anchormem/anchor init</code>
+                <button class="mini-copy" data-copy-text="npx @anchormem/anchor init">Copy</button>
+              </div>
             </div>
-            <div class="inline-install">
-              <span>or</span>
-              <code id="install-cmd">npx @anchormem/anchor init</code>
-              <button class="mini-copy" data-copy-text="npx @anchormem/anchor init">Copy</button>
+            <div class="hero-note">
+              <div class="marker">§ Editor's note</div>
+              <p>Anchor is a small, local-first MCP server that remembers what your coding agents learn — the package
+                manager, the decisions, the file where auth lives. Swap agents and the new one starts halfway done, not
+                from zero.</p>
+              <p class="note" style="margin-top:1rem">MIT-licensed. Local SQLite. No telemetry, no accounts.</p>
             </div>
           </div>
-          <div class="hero-note">
-            <div class="marker">§ Editor's note</div>
-            <p>Anchor is a small, local-first MCP server that remembers what your coding agents learn — the package manager, the decisions, the file where auth lives. Swap agents and the new one starts halfway done, not from zero.</p>
-            <p class="note" style="margin-top:1rem">MIT-licensed. Local SQLite. No telemetry, no accounts.</p>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <hr class="rule">
+        <hr class="rule">
 
-      <!-- ===== § 1 PROBLEM ===== -->
-      <section id="problem">
-        <div class="row reveal">
-          <div class="marker">§ 1</div>
-          <div class="body">
-            <h2>Your agent learned a lot today. <em>Then you switched agents.</em></h2>
-            <p class="lede">An hour in, your assistant has finally figured out the moving parts. Then quota runs out, or a teammate prefers a different tool, or a different model is just better for this particular task. The new agent opens the same repo and asks the same four questions you already answered.</p>
-            <p>The knowledge wasn't lost. It just lived in the wrong place — inside one agent's session, instead of inside the project.</p>
+        <!-- ===== § 1 PROBLEM ===== -->
+        <section id="problem">
+          <div class="row reveal">
+            <div class="marker">§ 1</div>
+            <div class="body">
+              <h2>Your agent learned a lot today. <em>Then you switched agents.</em></h2>
+              <p class="lede">An hour in, your assistant has finally figured out the moving parts. Then quota runs out,
+                or a teammate prefers a different tool, or a different model is just better for this particular task.
+                The new agent opens the same repo and asks the same four questions you already answered.</p>
+              <p>The knowledge wasn't lost. It just lived in the wrong place — inside one agent's session, instead of
+                inside the project.</p>
 
-            <div class="stat-card">
-              <div class="big">97.6<span style="font-size:0.6em">%</span></div>
-              <div>
-                <p class="desc">Cold start dragged in <b>9,400 tokens</b> of prior transcript. Anchor replaced that with <b>224 tokens</b> of typed recall — and recovered <b>5 of 5</b> facts a human would have re-typed by hand.</p>
-                <div class="attrib">Reproducible at tests/eval/run.mjs</div>
+              <div class="stat-card">
+                <div class="big">97.6<span style="font-size:0.6em">%</span></div>
+                <div>
+                  <p class="desc">Cold start dragged in <b>9,400 tokens</b> of prior transcript. Anchor replaced that
+                    with <b>224 tokens</b> of typed recall — and recovered <b>5 of 5</b> facts a human would have
+                    re-typed by hand.</p>
+                  <div class="attrib">Reproducible at tests/eval/run.mjs</div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <hr class="rule">
+        <hr class="rule">
 
-      <!-- ===== § 2 DEMO ===== -->
-      <section id="demo">
-        <div class="row reveal">
-          <div class="marker">§ 2</div>
-          <div class="body">
-            <h2>Same task. <em>One has memory.</em></h2>
-            <p class="lede">A trivial-looking ask — "add rate limiting to /auth/*" — sent to a fresh agent with no project context, then to the same agent with Anchor attached.</p>
+        <!-- ===== § 2 DEMO ===== -->
+        <section id="demo">
+          <div class="row reveal">
+            <div class="marker">§ 2</div>
+            <div class="body">
+              <h2>Same task. <em>One has memory.</em></h2>
+              <p class="lede">A trivial-looking ask — "add rate limiting to /auth/*" — sent to a fresh agent with no
+                project context, then to the same agent with Anchor attached.</p>
 
-            <div class="ab-wrap">
+              <div class="ab-wrap">
 
-              <div class="ab-block without">
-                <div class="ab-label"><span class="dot"></span>Without Anchor</div>
-                <div class="terminal">
-                  <div class="terminal-head">
-                    <span class="lights"><i></i><i></i><i></i></span>
-                    <span class="term-title">~ — zsh — cold start</span>
-                    <button class="term-badge" data-copy="ab-1">⎘ COPY</button>
-                  </div>
-<pre class="terminal-body" id="ab-1"><span class="prompt">$</span> gemini ask "add rate limiting to /auth/*"
+                <div class="ab-block without">
+                  <div class="ab-label"><span class="dot"></span>Without Anchor</div>
+                  <div class="terminal">
+                    <div class="terminal-head">
+                      <span class="lights"><i></i><i></i><i></i></span>
+                      <span class="term-title">~ — zsh — cold start</span>
+                      <button class="term-badge" data-copy="ab-1">⎘ COPY</button>
+                    </div>
+                    <pre class="terminal-body" id="ab-1"><span class="prompt">$</span> gemini ask "add rate limiting to /auth/*"
 
 <span class="dim">Loading prior session transcripts as context…</span>
 <span class="dim">── 9,400 tokens injected ────────────────────</span>
@@ -943,32 +1563,33 @@
 <span class="comment">Q:</span> Is there a preference between Redis and Memcached?
 
 <span class="dim">Time to first useful action: 8m 12s</span></pre>
-                </div>
-              </div>
-
-              <div class="ab-connector" aria-hidden="true">
-                <span class="dash"></span>
-                <span class="anchor-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="5" r="2.2"/>
-                    <path d="M12 7.2v13.6"/>
-                    <path d="M7 11h10"/>
-                    <path d="M4.5 14.5c0 3.5 3 6.3 7.5 6.3s7.5-2.8 7.5-6.3"/>
-                  </svg>
-                </span>
-                <span class="tag">ANCHOR · <b>9,400 → 224 TOKENS</b></span>
-                <span class="dash"></span>
-              </div>
-
-              <div class="ab-block with">
-                <div class="ab-label"><span class="dot"></span>With Anchor</div>
-                <div class="terminal">
-                  <div class="terminal-head">
-                    <span class="lights"><i></i><i></i><i></i></span>
-                    <span class="term-title">~ — zsh — anchored</span>
-                    <button class="term-badge" data-copy="ab-2">⎘ COPY</button>
                   </div>
-<pre class="terminal-body" id="ab-2"><span class="prompt">$</span> gemini ask "add rate limiting to /auth/*"
+                </div>
+
+                <div class="ab-connector" aria-hidden="true">
+                  <span class="dash"></span>
+                  <span class="anchor-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <circle cx="12" cy="5" r="2.2" />
+                      <path d="M12 7.2v13.6" />
+                      <path d="M7 11h10" />
+                      <path d="M4.5 14.5c0 3.5 3 6.3 7.5 6.3s7.5-2.8 7.5-6.3" />
+                    </svg>
+                  </span>
+                  <span class="tag">ANCHOR · <b>9,400 → 224 TOKENS</b></span>
+                  <span class="dash"></span>
+                </div>
+
+                <div class="ab-block with">
+                  <div class="ab-label"><span class="dot"></span>With Anchor</div>
+                  <div class="terminal">
+                    <div class="terminal-head">
+                      <span class="lights"><i></i><i></i><i></i></span>
+                      <span class="term-title">~ — zsh — anchored</span>
+                      <button class="term-badge" data-copy="ab-2">⎘ COPY</button>
+                    </div>
+                    <pre class="terminal-body" id="ab-2"><span class="prompt">$</span> gemini ask "add rate limiting to /auth/*"
 
 <span class="green">Anchor: recalled 5 facts, 2 decisions, 1 episode</span>
 <span class="bright">── 224 tokens injected ──────────────────────</span>
@@ -979,335 +1600,413 @@ Decision: Redis token bucket
   <span class="comment">(tried in-memory; failed multi-region.)</span>
 
 Time to first useful action: <span class="green">1m 40s</span><span class="cursor"></span></pre>
+                  </div>
+                </div>
+              </div>
+              <p class="ab-caption">Same task, same agent — only the 224 tokens of SQLite recall, slotted in before the
+                model started thinking, made the difference.</p>
+            </div>
+          </div>
+        </section>
+
+        <hr class="rule">
+
+        <!-- ===== § 3 MEMORY TYPES ===== -->
+        <section id="memory-types">
+          <div class="row reveal">
+            <div class="marker">§ 3</div>
+            <div class="body">
+              <h2>Four kinds of memory, <em>not one undifferentiated blob.</em></h2>
+              <p class="lede">Most "memory" systems flatten everything into a vector and pray. Anchor takes the older,
+                less fashionable position that a fact is not a decision, and a decision is not the episode in which it
+                was made.</p>
+
+              <div class="mem-list">
+                <div class="mem-item">
+                  <div class="nm"><span class="num">i.</span>
+                    <h3><em>Fact</em></h3>
+                  </div>
+                  <span class="ex">"uses pnpm, not npm"</span>
+                  <p>Small, stable, project-scoped truths. The kind of thing a new teammate asks on their first day and
+                    never asks again.</p>
+                </div>
+                <div class="mem-item">
+                  <div class="nm"><span class="num">ii.</span>
+                    <h3><em>Decision</em></h3>
+                  </div>
+                  <span class="ex">"use Postgres for the orders service — ACID + team familiarity"</span>
+                  <p>Resolutions with reasons attached. Stored so the next agent can argue with the choice — or, more
+                    often, stop re-litigating it.</p>
+                </div>
+                <div class="mem-item">
+                  <div class="nm"><span class="num">iii.</span>
+                    <h3><em>Episode</em></h3>
+                  </div>
+                  <span class="ex">"Added rate limiting via Redis token bucket; touched src/auth/*"</span>
+                  <p>A timestamped record of what happened. Useful for "didn't we already try this last Tuesday" — and
+                    yes, you did.</p>
+                </div>
+                <div class="mem-item">
+                  <div class="nm"><span class="num">iv.</span>
+                    <h3><em>Artifact</em></h3>
+                  </div>
+                  <span class="ex">src/auth/middleware.ts:42</span>
+                  <p>Pointers into the actual codebase. Files, line numbers, fixtures. The map, not the territory.</p>
+                </div>
+              </div>
+
+              <div class="mem-extras">
+                <p>New facts that contradict old ones don't pile up — <code>memory_supersede</code> retires the stale
+                  entry and writes the new one in its place. Old episodes age out on their own through a salience decay
+                  function; nobody has to garbage-collect anything by hand. And before any of this hits disk, secrets
+                  are scrubbed at the write boundary, not as a courtesy on the way back out.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <hr class="rule">
+
+        <!-- ===== § 4 ARCHITECTURE ===== -->
+        <section id="architecture">
+          <div class="row reveal">
+            <div class="marker">§ 4</div>
+            <div class="body">
+              <h2>One server, five tools, <em>a file you own.</em></h2>
+              <p class="lede">The whole thing is small on purpose. A single MCP server speaks to every agent on the top
+                row. A single SQLite file on your machine holds every memory. Embeddings, if you want them, are an
+                opt-in adapter — never the primary recall path.</p>
+
+              <div class="arch">
+                <div class="arch-row">
+                  <span class="arch-chip">Claude Code</span>
+                  <span class="arch-chip">Codex</span>
+                  <span class="arch-chip">Cursor</span>
+                  <span class="arch-chip">Cline</span>
+                  <span class="arch-chip">Gemini CLI</span>
+                </div>
+                <div class="arch-arrows">↓ ↓ ↓ ↓ ↓</div>
+                <div class="arch-server">
+                  <div class="stamp">SERVER · 0.0.1</div>
+                  <div class="name">Anchor <em>MCP Server</em></div>
+                  <div class="tools"><b>recall</b> · <b>remember</b> · <b>supersede</b> · <b>forget</b> · <b>list</b>
+                  </div>
+                </div>
+                <div class="arch-arrows">↓ ↓ ↓</div>
+                <div class="arch-branch">
+                  <div class="arch-leaf">
+                    <div class="lbl">Storage</div>
+                    <div class="val">~/.anchor/memory.db<br><span style="color:var(--ink-muted)">SQLite · FTS5
+                        BM25</span></div>
+                  </div>
+                  <div class="arch-leaf">
+                    <div class="lbl">Embeddings (opt-in)</div>
+                    <div class="val" style="color:var(--ink-muted)">Ollama / OpenAI<br>Gemini / Voyage</div>
+                  </div>
+                  <div class="arch-leaf badge-leaf">
+                    <div class="lbl">Footprint</div>
+                    <div class="val">4.2 MB</div>
+                  </div>
                 </div>
               </div>
             </div>
-            <p class="ab-caption">Same task, same agent — only the 224 tokens of SQLite recall, slotted in before the model started thinking, made the difference.</p>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <hr class="rule">
+        <hr class="rule">
 
-      <!-- ===== § 3 MEMORY TYPES ===== -->
-      <section id="memory-types">
-        <div class="row reveal">
-          <div class="marker">§ 3</div>
-          <div class="body">
-            <h2>Four kinds of memory, <em>not one undifferentiated blob.</em></h2>
-            <p class="lede">Most "memory" systems flatten everything into a vector and pray. Anchor takes the older, less fashionable position that a fact is not a decision, and a decision is not the episode in which it was made.</p>
+        <!-- ===== § 5 PERFORMANCE ===== -->
+        <section id="performance">
+          <div class="row reveal">
+            <div class="marker">§ 5</div>
+            <div class="body">
+              <h2>Boring numbers, <em>measured honestly.</em></h2>
+              <p class="lede">No asterisks, no "up to," no charts massaged into looking like hockey sticks. The query
+                hot path runs under four milliseconds at the ten-thousandth memory. If that ever stops being true, the
+                benchmark will say so.</p>
 
-            <div class="mem-list">
-              <div class="mem-item">
-                <div class="nm"><span class="num">i.</span><h3><em>Fact</em></h3></div>
-                <span class="ex">"uses pnpm, not npm"</span>
-                <p>Small, stable, project-scoped truths. The kind of thing a new teammate asks on their first day and never asks again.</p>
-              </div>
-              <div class="mem-item">
-                <div class="nm"><span class="num">ii.</span><h3><em>Decision</em></h3></div>
-                <span class="ex">"use Postgres for the orders service — ACID + team familiarity"</span>
-                <p>Resolutions with reasons attached. Stored so the next agent can argue with the choice — or, more often, stop re-litigating it.</p>
-              </div>
-              <div class="mem-item">
-                <div class="nm"><span class="num">iii.</span><h3><em>Episode</em></h3></div>
-                <span class="ex">"Added rate limiting via Redis token bucket; touched src/auth/*"</span>
-                <p>A timestamped record of what happened. Useful for "didn't we already try this last Tuesday" — and yes, you did.</p>
-              </div>
-              <div class="mem-item">
-                <div class="nm"><span class="num">iv.</span><h3><em>Artifact</em></h3></div>
-                <span class="ex">src/auth/middleware.ts:42</span>
-                <p>Pointers into the actual codebase. Files, line numbers, fixtures. The map, not the territory.</p>
+              <div class="bench-wrap">
+                <table class="bench">
+                  <thead>
+                    <tr>
+                      <th>Memories</th>
+                      <th>Insert avg</th>
+                      <th>Recall p50</th>
+                      <th class="p95">Recall p95</th>
+                      <th>Gist size</th>
+                      <th>DB size</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>100</td>
+                      <td>0.74 ms</td>
+                      <td>1.14 ms</td>
+                      <td class="p95">3.14 ms</td>
+                      <td>126 tokens</td>
+                      <td>168 KB</td>
+                    </tr>
+                    <tr>
+                      <td>1,000</td>
+                      <td>0.83 ms</td>
+                      <td>1.53 ms</td>
+                      <td class="p95">1.93 ms</td>
+                      <td>553 tokens</td>
+                      <td>596 KB</td>
+                    </tr>
+                    <tr>
+                      <td>10,000</td>
+                      <td>0.82 ms</td>
+                      <td>2.59 ms</td>
+                      <td class="p95">3.31 ms</td>
+                      <td>553 tokens</td>
+                      <td>4.2 MB</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="bench-caption">The query path is plain SQLite FTS5 with BM25 ranking — Anchor's reranking
+                  layer sits on top of it, not in front of it, which is why the numbers stay flat as the table grows.
+                </p>
+                <div class="bench-foot">Reproduce: node packages/server/dist/bench/bench.js</div>
               </div>
             </div>
+          </div>
+        </section>
 
-            <div class="mem-extras">
-              <p>New facts that contradict old ones don't pile up — <code>memory_supersede</code> retires the stale entry and writes the new one in its place. Old episodes age out on their own through a salience decay function; nobody has to garbage-collect anything by hand. And before any of this hits disk, secrets are scrubbed at the write boundary, not as a courtesy on the way back out.</p>
+        <hr class="rule">
+
+        <!-- ===== § 6 AGENTS ===== -->
+        <section id="agents">
+          <div class="row reveal">
+            <div class="marker">§ 6</div>
+            <div class="body">
+              <h2>If it speaks MCP, <em>it works.</em></h2>
+              <p class="lede">There is no agent allowlist, no per-vendor adapter, no integration backlog. Anchor speaks
+                the open protocol; whatever's on the other end does too, or it doesn't.</p>
             </div>
           </div>
-        </div>
-      </section>
+          <div class="marquee" aria-hidden="true" style="margin-top:1.5rem">
+            <div class="marquee-track">
+              <span>CLAUDE CODE · CODEX · CURSOR · CLINE · GEMINI CLI · CONTINUE.DEV · WINDSURF · OPENCODE · ZED ·
+                COPILOT · AIDER ·&nbsp;</span>
+              <span>CLAUDE CODE · CODEX · CURSOR · CLINE · GEMINI CLI · CONTINUE.DEV · WINDSURF · OPENCODE · ZED ·
+                COPILOT · AIDER ·&nbsp;</span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="marker"></div>
+            <div class="body">
+              <p class="marquee-caption">Plus 50+ more via the open Agent Skills spec at skills.sh</p>
+            </div>
+          </div>
+        </section>
 
-      <hr class="rule">
+        <hr class="rule">
 
-      <!-- ===== § 4 ARCHITECTURE ===== -->
-      <section id="architecture">
-        <div class="row reveal">
-          <div class="marker">§ 4</div>
-          <div class="body">
-            <h2>One server, five tools, <em>a file you own.</em></h2>
-            <p class="lede">The whole thing is small on purpose. A single MCP server speaks to every agent on the top row. A single SQLite file on your machine holds every memory. Embeddings, if you want them, are an opt-in adapter — never the primary recall path.</p>
+        <!-- ===== § 7 QUICK START ===== -->
+        <section id="install">
+          <div class="row reveal">
+            <div class="marker">§ 7</div>
+            <div class="body">
+              <h2>Three commands. <em>Under a minute.</em></h2>
+              <p class="lede">Nothing leaves the machine. No account, no API key, no cloud bucket waiting to be
+                misconfigured. The database is a file in your home directory; it's yours the moment it's written.</p>
 
-            <div class="arch">
-              <div class="arch-row">
-                <span class="arch-chip">Claude Code</span>
-                <span class="arch-chip">Codex</span>
-                <span class="arch-chip">Cursor</span>
-                <span class="arch-chip">Cline</span>
-                <span class="arch-chip">Gemini CLI</span>
-              </div>
-              <div class="arch-arrows">↓ ↓ ↓ ↓ ↓</div>
-              <div class="arch-server">
-                <div class="stamp">SERVER · 0.0.1</div>
-                <div class="name">Anchor <em>MCP Server</em></div>
-                <div class="tools"><b>recall</b> · <b>remember</b> · <b>supersede</b> · <b>forget</b> · <b>list</b></div>
-              </div>
-              <div class="arch-arrows">↓ ↓ ↓</div>
-              <div class="arch-branch">
-                <div class="arch-leaf">
-                  <div class="lbl">Storage</div>
-                  <div class="val">~/.anchor/memory.db<br><span style="color:var(--ink-muted)">SQLite · FTS5 BM25</span></div>
+              <div class="step">
+                <div class="step-head">
+                  <div class="step-num">01</div>
+                  <div class="step-title">Install &amp; <em>init</em></div>
                 </div>
-                <div class="arch-leaf">
-                  <div class="lbl">Embeddings (opt-in)</div>
-                  <div class="val" style="color:var(--ink-muted)">Ollama / OpenAI<br>Gemini / Voyage</div>
+                <div class="terminal">
+                  <div class="terminal-head">
+                    <span class="lights"><i></i><i></i><i></i></span>
+                    <span class="term-title">~ — zsh</span>
+                    <button class="term-badge" data-copy="cmd-1">⎘ COPY</button>
+                  </div>
+                  <pre class="terminal-body" id="cmd-1"><span class="prompt">$</span> npx @anchormem/anchor init</pre>
                 </div>
-                <div class="arch-leaf badge-leaf">
-                  <div class="lbl">Footprint</div>
-                  <div class="val">4.2 MB</div>
+              </div>
+
+              <div class="step">
+                <div class="step-head">
+                  <div class="step-num">02</div>
+                  <div class="step-title">Register with your <em>agent</em></div>
                 </div>
+                <div class="terminal">
+                  <div class="terminal-head">
+                    <span class="lights"><i></i><i></i><i></i></span>
+                    <span class="term-title">~ — zsh</span>
+                    <button class="term-badge" data-copy="cmd-2">⎘ COPY</button>
+                  </div>
+                  <pre class="terminal-body"
+                    id="cmd-2"><span class="prompt">$</span> claude mcp add anchor -- anchor-server</pre>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-head">
+                  <div class="step-num">03</div>
+                  <div class="step-title">Open the <em>console</em></div>
+                </div>
+                <div class="terminal">
+                  <div class="terminal-head">
+                    <span class="lights"><i></i><i></i><i></i></span>
+                    <span class="term-title">~ — zsh</span>
+                    <button class="term-badge" data-copy="cmd-3">⎘ COPY</button>
+                  </div>
+                  <pre class="terminal-body" id="cmd-3"><span class="prompt">$</span> anchor</pre>
+                </div>
+              </div>
+
+              <div class="step-links">
+                <a class="text-link" href="https://github.com/priyank766/anchor#other-agents">Other agents →</a>
+                <a class="text-link"
+                  href="https://github.com/priyank766/anchor#optional-semantic-recall-via-embeddings">Optional semantic
+                  recall →</a>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <hr class="rule">
+        <hr class="rule">
 
-      <!-- ===== § 5 PERFORMANCE ===== -->
-      <section id="performance">
-        <div class="row reveal">
-          <div class="marker">§ 5</div>
-          <div class="body">
-            <h2>Boring numbers, <em>measured honestly.</em></h2>
-            <p class="lede">No asterisks, no "up to," no charts massaged into looking like hockey sticks. The query hot path runs under four milliseconds at the ten-thousandth memory. If that ever stops being true, the benchmark will say so.</p>
-
-            <div class="bench-wrap">
-              <table class="bench">
-                <thead>
-                  <tr>
-                    <th>Memories</th>
-                    <th>Insert avg</th>
-                    <th>Recall p50</th>
-                    <th class="p95">Recall p95</th>
-                    <th>Gist size</th>
-                    <th>DB size</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>100</td><td>0.74 ms</td><td>1.14 ms</td><td class="p95">3.14 ms</td><td>126 tokens</td><td>168 KB</td></tr>
-                  <tr><td>1,000</td><td>0.83 ms</td><td>1.53 ms</td><td class="p95">1.93 ms</td><td>553 tokens</td><td>596 KB</td></tr>
-                  <tr><td>10,000</td><td>0.82 ms</td><td>2.59 ms</td><td class="p95">3.31 ms</td><td>553 tokens</td><td>4.2 MB</td></tr>
-                </tbody>
-              </table>
-              <p class="bench-caption">The query path is plain SQLite FTS5 with BM25 ranking — Anchor's reranking layer sits on top of it, not in front of it, which is why the numbers stay flat as the table grows.</p>
-              <div class="bench-foot">Reproduce: node packages/server/dist/bench/bench.js</div>
+        <!-- ===== § 8 TRUST ===== -->
+        <section id="trust">
+          <div class="row reveal">
+            <div class="marker">§ 8</div>
+            <div class="body">
+              <h2>What goes to disk, <em>and what doesn't.</em></h2>
+              <p>Before any memory is committed, Anchor runs the candidate string through a redaction pass: OpenAI,
+                Anthropic, Google, Stripe, Slack and GitHub keys; AWS access keys; JWTs; PEM-formatted private keys; the
+                usual cohort of <span class="inline-code">.env</span>-style secrets. If something matches a recognised
+                secret pattern, it's replaced with a stable placeholder before the SQLite write executes — not after,
+                not on the way back out.</p>
+              <p>The same pre-write pass scrubs a small library of known prompt-injection phrases. It is not a panacea,
+                but it does mean an agent can't be casually tricked into laundering a payload through your memory store
+                on its way to the next agent.</p>
+              <p>On POSIX systems the data directory is created mode <span class="inline-code">0700</span> and the
+                database file mode <span class="inline-code">0600</span> — readable only by you. On Windows the
+                equivalent inherited NTFS ACLs apply.</p>
+              <p>When recalled content is handed back to an agent it carries an explicit <em>untrusted</em> footer, so
+                the receiving model treats it as user-shaped input rather than as system instruction.</p>
+              <p>There is no telemetry. There are no accounts. There is nothing to log in to, and nothing logging you.
+              </p>
+              <p style="margin-top:1.8rem"><a class="text-link"
+                  href="https://github.com/priyank766/anchor/blob/main/SECURITY.md">Read the security policy →</a></p>
             </div>
           </div>
+        </section>
+
+      </main>
+
+      <!-- ===== FOOTER ===== -->
+      <footer>
+        <div class="foot-top">
+          <div class="foot-brand">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="12" cy="5" r="2.2" />
+                <path d="M12 7.2v13.6" />
+                <path d="M7 11h10" />
+                <path d="M4.5 14.5c0 3.5 3 6.3 7.5 6.3s7.5-2.8 7.5-6.3" />
+              </svg>
+            </span>
+            Anchor.
+          </div>
+          <div class="foot-issue">№ 001 / 2026 · MIT · v0.0.1</div>
         </div>
-      </section>
-
-      <hr class="rule">
-
-      <!-- ===== § 6 AGENTS ===== -->
-      <section id="agents">
-        <div class="row reveal">
-          <div class="marker">§ 6</div>
-          <div class="body">
-            <h2>If it speaks MCP, <em>it works.</em></h2>
-            <p class="lede">There is no agent allowlist, no per-vendor adapter, no integration backlog. Anchor speaks the open protocol; whatever's on the other end does too, or it doesn't.</p>
+        <div class="foot-cols">
+          <div>
+            <h4>Project</h4>
+            <ul>
+              <li><a href="https://github.com/priyank766/anchor">GitHub</a></li>
+              <li><a href="https://npmjs.com/package/@anchormem/anchor">npm</a></li>
+              <li><a href="https://github.com/priyank766/anchor/blob/main/LICENSE">LICENSE</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Resources</h4>
+            <ul>
+              <li><a href="#install">Quick start</a></li>
+              <li><a href="https://github.com/priyank766/anchor/blob/main/SECURITY.md">Security</a></li>
+              <li><a href="https://github.com/priyank766/anchor#contributing">Contributing</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>About</h4>
+            <ul>
+              <li><span>MIT-licensed</span></li>
+              <li><span>v0.0.1</span></li>
+            </ul>
           </div>
         </div>
-        <div class="marquee" aria-hidden="true" style="margin-top:1.5rem">
-          <div class="marquee-track">
-            <span>CLAUDE CODE · CODEX · CURSOR · CLINE · GEMINI CLI · CONTINUE.DEV · WINDSURF · OPENCODE · ZED · COPILOT · AIDER ·&nbsp;</span>
-            <span>CLAUDE CODE · CODEX · CURSOR · CLINE · GEMINI CLI · CONTINUE.DEV · WINDSURF · OPENCODE · ZED · COPILOT · AIDER ·&nbsp;</span>
-          </div>
-        </div>
-        <div class="row">
-          <div class="marker"></div>
-          <div class="body"><p class="marquee-caption">Plus 50+ more via the open Agent Skills spec at skills.sh</p></div>
-        </div>
-      </section>
+        <p class="foot-attrib">Built with care in Ahmedabad, India by <a href="https://priyank.is-a.dev">Priyank
+            Patel</a> <span class="no-underline">↗</span></p>
+        <p class="foot-thanks">— thank you for reading —</p>
+        <div class="foot-copy">© 2026 Anchor contributors · Open source under MIT · github.com/priyank766/anchor</div>
+      </footer>
 
-      <hr class="rule">
-
-      <!-- ===== § 7 QUICK START ===== -->
-      <section id="install">
-        <div class="row reveal">
-          <div class="marker">§ 7</div>
-          <div class="body">
-            <h2>Three commands. <em>Under a minute.</em></h2>
-            <p class="lede">Nothing leaves the machine. No account, no API key, no cloud bucket waiting to be misconfigured. The database is a file in your home directory; it's yours the moment it's written.</p>
-
-            <div class="step">
-              <div class="step-head"><div class="step-num">01</div><div class="step-title">Install &amp; <em>init</em></div></div>
-              <div class="terminal">
-                <div class="terminal-head">
-                  <span class="lights"><i></i><i></i><i></i></span>
-                  <span class="term-title">~ — zsh</span>
-                  <button class="term-badge" data-copy="cmd-1">⎘ COPY</button>
-                </div>
-<pre class="terminal-body" id="cmd-1"><span class="prompt">$</span> npx @anchormem/anchor init</pre>
-              </div>
-            </div>
-
-            <div class="step">
-              <div class="step-head"><div class="step-num">02</div><div class="step-title">Register with your <em>agent</em></div></div>
-              <div class="terminal">
-                <div class="terminal-head">
-                  <span class="lights"><i></i><i></i><i></i></span>
-                  <span class="term-title">~ — zsh</span>
-                  <button class="term-badge" data-copy="cmd-2">⎘ COPY</button>
-                </div>
-<pre class="terminal-body" id="cmd-2"><span class="prompt">$</span> claude mcp add anchor -- anchor-server</pre>
-              </div>
-            </div>
-
-            <div class="step">
-              <div class="step-head"><div class="step-num">03</div><div class="step-title">Open the <em>console</em></div></div>
-              <div class="terminal">
-                <div class="terminal-head">
-                  <span class="lights"><i></i><i></i><i></i></span>
-                  <span class="term-title">~ — zsh</span>
-                  <button class="term-badge" data-copy="cmd-3">⎘ COPY</button>
-                </div>
-<pre class="terminal-body" id="cmd-3"><span class="prompt">$</span> anchor</pre>
-              </div>
-            </div>
-
-            <div class="step-links">
-              <a class="text-link" href="https://github.com/priyank766/anchor#other-agents">Other agents →</a>
-              <a class="text-link" href="https://github.com/priyank766/anchor#optional-semantic-recall-via-embeddings">Optional semantic recall →</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <hr class="rule">
-
-      <!-- ===== § 8 TRUST ===== -->
-      <section id="trust">
-        <div class="row reveal">
-          <div class="marker">§ 8</div>
-          <div class="body">
-            <h2>What goes to disk, <em>and what doesn't.</em></h2>
-            <p>Before any memory is committed, Anchor runs the candidate string through a redaction pass: OpenAI, Anthropic, Google, Stripe, Slack and GitHub keys; AWS access keys; JWTs; PEM-formatted private keys; the usual cohort of <span class="inline-code">.env</span>-style secrets. If something matches a recognised secret pattern, it's replaced with a stable placeholder before the SQLite write executes — not after, not on the way back out.</p>
-            <p>The same pre-write pass scrubs a small library of known prompt-injection phrases. It is not a panacea, but it does mean an agent can't be casually tricked into laundering a payload through your memory store on its way to the next agent.</p>
-            <p>On POSIX systems the data directory is created mode <span class="inline-code">0700</span> and the database file mode <span class="inline-code">0600</span> — readable only by you. On Windows the equivalent inherited NTFS ACLs apply.</p>
-            <p>When recalled content is handed back to an agent it carries an explicit <em>untrusted</em> footer, so the receiving model treats it as user-shaped input rather than as system instruction.</p>
-            <p>There is no telemetry. There are no accounts. There is nothing to log in to, and nothing logging you.</p>
-            <p style="margin-top:1.8rem"><a class="text-link" href="https://github.com/priyank766/anchor/blob/main/SECURITY.md">Read the security policy →</a></p>
-          </div>
-        </div>
-      </section>
-
-    </main>
-
-    <!-- ===== FOOTER ===== -->
-    <footer>
-      <div class="foot-top">
-        <div class="foot-brand">
-          <span class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="5" r="2.2"/>
-              <path d="M12 7.2v13.6"/>
-              <path d="M7 11h10"/>
-              <path d="M4.5 14.5c0 3.5 3 6.3 7.5 6.3s7.5-2.8 7.5-6.3"/>
-            </svg>
-          </span>
-          Anchor.
-        </div>
-        <div class="foot-issue">№ 001 / 2026 · MIT · v0.0.1</div>
-      </div>
-      <div class="foot-cols">
-        <div>
-          <h4>Project</h4>
-          <ul>
-            <li><a href="https://github.com/priyank766/anchor">GitHub</a></li>
-            <li><a href="https://npmjs.com/package/@anchormem/anchor">npm</a></li>
-            <li><a href="https://github.com/priyank766/anchor/blob/main/LICENSE">LICENSE</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4>Resources</h4>
-          <ul>
-            <li><a href="#install">Quick start</a></li>
-            <li><a href="https://github.com/priyank766/anchor/blob/main/SECURITY.md">Security</a></li>
-            <li><a href="https://github.com/priyank766/anchor#contributing">Contributing</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4>About</h4>
-          <ul>
-            <li><span>MIT-licensed</span></li>
-            <li><span>v0.0.1</span></li>
-          </ul>
-        </div>
-      </div>
-      <p class="foot-attrib">Built with care in Ahmedabad, India by <a href="https://priyank.is-a.dev">Priyank Patel</a> <span class="no-underline">↗</span></p>
-      <p class="foot-thanks">— thank you for reading —</p>
-      <div class="foot-copy">© 2026 Anchor contributors · Open source under MIT · github.com/priyank766/anchor</div>
-    </footer>
-
+    </div>
   </div>
-</div>
 
-<script>
-  // section fade-in
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
-    }
-  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
-
-  // robust copy helper (falls back to textarea+execCommand in iframes/non-secure contexts)
-  async function copyToClipboard(text) {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        return true;
+  <script>
+    // section fade-in
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
       }
-    } catch (e) { /* fall through */ }
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.cssText = 'position:fixed;top:-1000px;left:-1000px;opacity:0';
-    document.body.appendChild(ta);
-    ta.select();
-    let ok = false;
-    try { ok = document.execCommand('copy'); } catch (e) {}
-    document.body.removeChild(ta);
-    return ok;
-  }
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-  // terminal copy buttons
-  document.querySelectorAll('.term-badge').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const target = document.getElementById(btn.dataset.copy);
-      if (!target) return;
-      // strip leading "$ " shell prompt from each line
-      const raw = target.innerText;
-      const text = raw.split('\n').map(line => line.replace(/^\$\s+/, '')).join('\n').trim();
-      const ok = await copyToClipboard(text);
-      btn.classList.add('copied');
-      btn.textContent = ok ? '✓ COPIED' : '! FAILED';
-      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '⎘ COPY'; }, 1600);
-    });
-  });
+    // robust copy helper (falls back to textarea+execCommand in iframes/non-secure contexts)
+    async function copyToClipboard(text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (e) { /* fall through */ }
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px;left:-1000px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { }
+      document.body.removeChild(ta);
+      return ok;
+    }
 
-  // mini install copy
-  document.querySelectorAll('.mini-copy').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const text = btn.dataset.copyText || '';
-      const ok = await copyToClipboard(text);
-      btn.classList.add('copied');
-      const orig = 'Copy';
-      btn.textContent = ok ? 'Copied' : 'Failed';
-      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1600);
+    // terminal copy buttons
+    document.querySelectorAll('.term-badge').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const target = document.getElementById(btn.dataset.copy);
+        if (!target) return;
+        // strip leading "$ " shell prompt from each line
+        const raw = target.innerText;
+        const text = raw.split('\n').map(line => line.replace(/^\$\s+/, '')).join('\n').trim();
+        const ok = await copyToClipboard(text);
+        btn.classList.add('copied');
+        btn.textContent = ok ? '✓ COPIED' : '! FAILED';
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '⎘ COPY'; }, 1600);
+      });
     });
-  });
-</script>
+
+    // mini install copy
+    document.querySelectorAll('.mini-copy').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const text = btn.dataset.copyText || '';
+        const ok = await copyToClipboard(text);
+        btn.classList.add('copied');
+        const orig = 'Copy';
+        btn.textContent = ok ? 'Copied' : 'Failed';
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1600);
+      });
+    });
+  </script>
 
 </body>
+
 </html>
