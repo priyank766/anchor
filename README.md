@@ -283,6 +283,26 @@ The interactive console is the easiest way to inspect and edit memory. Type a qu
 
 ---
 
+## HTTP transport mode
+
+By default, Anchor speaks MCP over stdio — the standard for CLI-based agent hosts. For web UIs, Docker deployments, or remote agents, start the server in HTTP mode:
+
+```bash
+# Via environment variable
+ANCHOR_TRANSPORT=http anchor-server
+
+# Via CLI flag
+anchor-server --http
+
+# Custom port (default: 3838)
+ANCHOR_HTTP_PORT=4000 ANCHOR_TRANSPORT=http anchor-server
+```
+
+> [!CAUTION]
+> HTTP mode binds to `127.0.0.1` only. It enforces DNS rebinding protection (Host header validation), CORS restricted to localhost origins, per-IP rate limiting (100 req/min), 1 MB request body limits, and security headers. **Do not expose to the network** — Anchor is a local-first product.
+
+---
+
 ## Optional: semantic recall via embeddings
 
 Anchor's default retrieval is BM25 over SQLite FTS5 — fast, deterministic, no setup. When a query and a stored fact don't share keywords (*"the auth thing"* vs *"JWT verifier rotation"*), BM25 misses. Configure any embedding provider to add semantic recall on top.
@@ -364,16 +384,17 @@ To report a security issue privately, see [SECURITY.md](SECURITY.md).
 
 ## Project status
 
-Phase 0 skeleton plus most of Phase 1 are shipped:
+Phases 0–1 complete. Phase 2 (distribution + polish) is in progress:
 
 - ✓ Four memory types · BM25 retrieval · hybrid (BM25 + vector) via four embedding providers
 - ✓ Secret redaction · prompt-injection scrubbing · scope isolation · 0700 data dir
 - ✓ Salience decay · supersession · export/import · `anchor doctor`
-- ✓ Universal session-start hook (Claude Code, Gemini, Codex, OpenCode, Hermes, generic)
+- ✓ Universal session lifecycle hooks — session-start, stop/end, pre-compact (Claude Code, Gemini, Codex, OpenCode, Hermes, generic)
+- ✓ HTTP transport mode with security hardening (DNS rebinding protection, rate limiting, CORS)
 - ✓ Reproducible offline benchmark — **97% token-cost reduction** vs transcript paste
 - ✓ Published to npm — `@anchormem/{server, cli, anchor}@0.0.1`
 
-**79 tests passing.** Live cold-vs-warm benchmark across real agents and a marketing site are next.
+**94 tests passing.** npm distribution polish, MCP directory submissions, and marketing site are next.
 
 ---
 

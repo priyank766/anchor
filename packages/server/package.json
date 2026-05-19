@@ -40,7 +40,8 @@
     "./tools/remember": "./dist/tools/remember.js",
     "./tools/forget": "./dist/tools/forget.js",
     "./tools/supersede": "./dist/tools/supersede.js",
-    "./providers/types": "./dist/providers/types.js"
+    "./providers/types": "./dist/providers/types.js",
+    "./http": "./dist/http.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

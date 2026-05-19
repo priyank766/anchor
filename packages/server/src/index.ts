@@ -12,6 +12,7 @@ import { handleRecall } from "./tools/recall.js";
 import { handleForget } from "./tools/forget.js";
 import { handleList } from "./tools/list.js";
 import { handleSupersede } from "./tools/supersede.js";
+import { startHttpServer } from "./http.js";
 
 const TOOLS = [
   {
@@ -94,9 +95,17 @@ const TOOLS = [
   },
 ];
 
+// Detect transport mode from env or CLI args.
+function detectTransport(): "stdio" | "http" {
+  if (process.env.ANCHOR_TRANSPORT?.toLowerCase() === "http") return "http";
+  if (process.argv.includes("--http")) return "http";
+  return "stdio";
+}
+
 async function main() {
   const cfg = loadConfig();
   const store = new Store(cfg);
+  const mode = detectTransport();
 
   const server = new Server(
     { name: "anchor", version: "0.0.1" },
@@ -148,10 +157,17 @@ async function main() {
     }
   });
 
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  // Server runs until stdin closes. No log-to-stdout: stdio is the protocol.
-  process.stderr.write(`[anchor] ready. db=${cfg.dbPath}\n`);
+  if (mode === "http") {
+    const port = parseInt(process.env.ANCHOR_HTTP_PORT ?? "3838", 10);
+    const host = process.env.ANCHOR_HTTP_HOST ?? "127.0.0.1";
+    process.stderr.write(`[anchor] starting HTTP transport. db=${cfg.dbPath}\n`);
+    await startHttpServer({ port, host, mcpServer: server });
+  } else {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    // Server runs until stdin closes. No log-to-stdout: stdio is the protocol.
+    process.stderr.write(`[anchor] ready. db=${cfg.dbPath}\n`);
+  }
 }
 
 main().catch((e) => {

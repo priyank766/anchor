@@ -16,8 +16,8 @@
 //
 // Supported events:
 //   session-start  → recall + inject (the headline use case)
-//   stop / end     → reserved (currently no-op)
-//   pre-compact    → reserved (currently no-op)
+//   stop / end     → write a session-end episode for continuity
+//   pre-compact    → prune low-salience episodes before context compaction
 //
 // Reading: stdin is parsed as JSON if available; the only field we use is
 // `cwd` (Claude Code provides it; for others we fall back to process.cwd()).
@@ -27,6 +27,7 @@ import { Store } from "@anchormem/server/store/db";
 import { compressToGist } from "@anchormem/server/retrieval/compress";
 import { loadConfig } from "@anchormem/server/config";
 import { findGitRoot } from "@anchormem/server/scope";
+import { hostname } from "node:os";
 
 interface HookPayload {
   cwd?: string;
@@ -84,10 +85,7 @@ export async function runHookWith(args: string[], raw: string): Promise<void> {
     process.exit(1);
   }
 
-  if (event === "stop" || event === "end" || event === "pre-compact") {
-    return;
-  }
-  if (event !== "session-start") {
+  if (event !== "session-start" && event !== "stop" && event !== "end" && event !== "pre-compact") {
     process.stderr.write(`anchor: unknown hook event "${event}"\n`);
     process.exit(1);
   }
@@ -106,24 +104,85 @@ export async function runHookWith(args: string[], raw: string): Promise<void> {
 
   const cfg = loadConfig();
   const store = new Store(cfg);
-  let gist: string;
-  let matched: number;
+
   try {
-    // Session-start has no specific query; surface the most recent N memories
-    // in scope and let the gist compressor budget them. BM25 search would
-    // miss generic facts that don't share tokens with any specific query.
-    const scopeRef = store.resolveScope(scope);
-    const rows = store.listByScope(scopeRef.id, undefined, 50);
-    matched = rows.length;
-    gist = compressToGist(rows, { budgetTokens: 1500, query: "session-start" });
+    if (event === "session-start") {
+      handleSessionStart(store, scope, agent);
+    } else if (event === "stop" || event === "end") {
+      handleStop(store, scope, agent, payload);
+    } else if (event === "pre-compact") {
+      handlePreCompact(store, scope);
+    }
   } finally {
     store.close();
   }
+}
 
-  if (matched === 0) return;
+// --- session-start: recall recent memories and inject into context -----------
+function handleSessionStart(store: Store, scope: string, agent: AgentFlavor): void {
+  const scopeRef = store.resolveScope(scope);
+  const rows = store.listByScope(scopeRef.id, undefined, 50);
+  if (rows.length === 0) return;
 
+  const gist = compressToGist(rows, { budgetTokens: 1500, query: "session-start" });
   const body = formatBody(scope, gist);
   emitForAgent(agent, body);
+}
+
+// --- stop/end: write a session-end episode so the next session has context ---
+function handleStop(
+  store: Store,
+  scope: string,
+  agent: AgentFlavor,
+  payload: HookPayload
+): void {
+  const scopeRef = store.resolveScope(scope);
+
+  // Gather recent episodes from this session to generate a meaningful summary.
+  const recentRows = store.listByScope(scopeRef.id, "episode", 10);
+  if (recentRows.length === 0) return;
+
+  // Create a concise summary of what happened this session. We compose it from
+  // the most recent episodes since Anchor itself has no LLM — the agent already
+  // wrote good episode summaries, we just aggregate them into a "session ended"
+  // marker so the next session-start has continuity.
+  const summaryParts = recentRows
+    .slice(0, 5)
+    .map((r) => r.content)
+    .filter((c) => c.length > 0);
+
+  if (summaryParts.length === 0) return;
+
+  const sessionSummary = `Session ended. Recent activity: ${summaryParts.join("; ").slice(0, 500)}`;
+
+  // Record the source — use the agent name from the hook args and the session
+  // id from the payload if available.
+  const sourceId = store.recordSource({
+    agent: agent ?? "unknown",
+    sessionId: payload.session_id,
+    deviceId: hostname(),
+  });
+
+  store.insertEpisode({
+    scopeId: scopeRef.id,
+    sourceId,
+    summary: sessionSummary,
+  });
+
+  process.stderr.write(`[anchor] session-end episode recorded for scope ${scope}\n`);
+}
+
+// --- pre-compact: prune low-salience episodes before context compaction ------
+function handlePreCompact(store: Store, scope: string): void {
+  const scopeRef = store.resolveScope(scope);
+  // Use a moderate threshold — we don't want to lose genuinely useful episodes,
+  // but anything that's decayed below 0.2 is unlikely to surface in recall anyway.
+  const deleted = store.pruneEpisodes(scopeRef.id, 0.2);
+  if (deleted > 0) {
+    process.stderr.write(
+      `[anchor] pre-compact: pruned ${deleted} low-salience episode${deleted === 1 ? "" : "s"} from scope ${scope}\n`
+    );
+  }
 }
 
 function formatBody(scope: string, gist: string): string {
@@ -157,3 +216,4 @@ function emitForAgent(agent: AgentFlavor, body: string): void {
       return;
   }
 }
+
