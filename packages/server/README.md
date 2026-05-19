@@ -13,6 +13,15 @@ npm install -g @anchormem/server
 anchor-server   # starts the stdio MCP server
 ```
 
+### HTTP transport
+
+```bash
+ANCHOR_TRANSPORT=http anchor-server         # localhost:3838
+ANCHOR_HTTP_PORT=4000 ANCHOR_TRANSPORT=http anchor-server
+```
+
+HTTP mode binds to `127.0.0.1` only, with DNS rebinding protection, rate limiting, and restricted CORS. See the main README for security details.
+
 ## Documentation
 
 See the [main project README](https://github.com/priyank766/anchor#readme) for installation, agent configuration, concepts, security notes, and the full reference.
