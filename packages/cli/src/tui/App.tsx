@@ -38,7 +38,7 @@ export function App({ store, initialScope }: Props) {
     refreshStats();
   }, []);
 
-  const stats = useMemo(() => {
+  const stats = useMemo((): { total: number; fact: number; decision: number; episode: number; artifact: number } => {
     const ref = store.resolveScope(scope);
     const rows = store.listByScope(ref.id, undefined, 1000);
     const c: Record<MemoryType, number> = { fact: 0, decision: 0, episode: 0, artifact: 0 };
@@ -181,7 +181,7 @@ export function App({ store, initialScope }: Props) {
         ? { type, ref: text, scope, agent: "anchor-tui" }
         : { type, content: text, scope, agent: "anchor-tui" };
     handleRememberShared(store, args).then(
-      (out) => {
+      (out: { id: string; redacted?: string[]; scrubbed?: string[] }) => {
         const tags: string[] = [];
         if (out.redacted) tags.push(`redacted: ${out.redacted.join(",")}`);
         if (out.scrubbed) tags.push(`scrubbed: ${out.scrubbed.join(",")}`);

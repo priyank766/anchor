@@ -23,7 +23,7 @@
 // `cwd` (Claude Code provides it; for others we fall back to process.cwd()).
 // Unrecognized payloads do not error — we degrade to cwd-based scope.
 
-import { Store } from "@anchormem/server/store/db";
+import { Store, type MemoryRow } from "@anchormem/server/store/db";
 import { compressToGist } from "@anchormem/server/retrieval/compress";
 import { loadConfig } from "@anchormem/server/config";
 import { findGitRoot } from "@anchormem/server/scope";
@@ -148,8 +148,8 @@ function handleStop(
   // marker so the next session-start has continuity.
   const summaryParts = recentRows
     .slice(0, 5)
-    .map((r) => r.content)
-    .filter((c) => c.length > 0);
+    .map((r: MemoryRow) => r.content)
+    .filter((c: string) => c.length > 0);
 
   if (summaryParts.length === 0) return;
 

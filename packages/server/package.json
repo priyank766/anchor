@@ -29,19 +29,58 @@
     "anchor-server": "dist/index.js"
   },
   "exports": {
-    ".": "./dist/index.js",
-    "./config": "./dist/config.js",
-    "./scope": "./dist/scope.js",
-    "./capture/redact": "./dist/capture/redact.js",
-    "./retrieval/compress": "./dist/retrieval/compress.js",
-    "./store/db": "./dist/store/db.js",
-    "./tools/list": "./dist/tools/list.js",
-    "./tools/recall": "./dist/tools/recall.js",
-    "./tools/remember": "./dist/tools/remember.js",
-    "./tools/forget": "./dist/tools/forget.js",
-    "./tools/supersede": "./dist/tools/supersede.js",
-    "./providers/types": "./dist/providers/types.js",
-    "./http": "./dist/http.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "default": "./dist/config.js"
+    },
+    "./scope": {
+      "types": "./dist/scope.d.ts",
+      "default": "./dist/scope.js"
+    },
+    "./capture/redact": {
+      "types": "./dist/capture/redact.d.ts",
+      "default": "./dist/capture/redact.js"
+    },
+    "./retrieval/compress": {
+      "types": "./dist/retrieval/compress.d.ts",
+      "default": "./dist/retrieval/compress.js"
+    },
+    "./store/db": {
+      "types": "./dist/store/db.d.ts",
+      "default": "./dist/store/db.js"
+    },
+    "./tools/list": {
+      "types": "./dist/tools/list.d.ts",
+      "default": "./dist/tools/list.js"
+    },
+    "./tools/recall": {
+      "types": "./dist/tools/recall.d.ts",
+      "default": "./dist/tools/recall.js"
+    },
+    "./tools/remember": {
+      "types": "./dist/tools/remember.d.ts",
+      "default": "./dist/tools/remember.js"
+    },
+    "./tools/forget": {
+      "types": "./dist/tools/forget.d.ts",
+      "default": "./dist/tools/forget.js"
+    },
+    "./tools/supersede": {
+      "types": "./dist/tools/supersede.d.ts",
+      "default": "./dist/tools/supersede.js"
+    },
+    "./providers/types": {
+      "types": "./dist/providers/types.d.ts",
+      "default": "./dist/providers/types.js"
+    },
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "default": "./dist/http.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
