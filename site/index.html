@@ -1700,6 +1700,7 @@ Time to first useful action: <span class="green">1m 40s</span><span class="curso
                   <div class="name">Anchor <em>MCP Server</em></div>
                   <div class="tools"><b>recall</b> · <b>remember</b> · <b>supersede</b> · <b>forget</b> · <b>list</b>
                   </div>
+                  <div class="tools" style="margin-top:0.4rem;font-size:0.78rem;color:var(--code-muted)">stdio <span style="opacity:0.5">|</span> HTTP (localhost:3838)</div>
                 </div>
                 <div class="arch-arrows">↓ ↓ ↓</div>
                 <div class="arch-branch">
@@ -1893,6 +1894,10 @@ Time to first useful action: <span class="green">1m 40s</span><span class="curso
               <p>The same pre-write pass scrubs a small library of known prompt-injection phrases. It is not a panacea,
                 but it does mean an agent can't be casually tricked into laundering a payload through your memory store
                 on its way to the next agent.</p>
+              <p>When running in HTTP transport mode, the server binds to <span class="inline-code">127.0.0.1</span> only.
+                It validates Host headers against localhost variants (DNS rebinding protection), restricts CORS origins
+                to <span class="inline-code">localhost</span>, enforces a 100 req/min rate limit per IP, caps request
+                bodies at 1 MB, and sets strict security headers — all without configuration.</p>
               <p>On POSIX systems the data directory is created mode <span class="inline-code">0700</span> and the
                 database file mode <span class="inline-code">0600</span> — readable only by you. On Windows the
                 equivalent inherited NTFS ACLs apply.</p>

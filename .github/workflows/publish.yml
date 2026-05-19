@@ -1,0 +1,54 @@
+name: Publish to npm
+
+# Publish on version tag push (e.g. v0.0.2)
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write  # Required for npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm-publish
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build --workspaces
+
+      - name: Run tests
+        run: |
+          cd packages/server && npx vitest run && cd ../..
+          cd packages/cli && npx vitest run && cd ../..
+
+      - name: Publish @anchormem/server
+        run: npm publish --access public --provenance
+        working-directory: packages/server
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @anchormem/cli
+        run: npm publish --access public --provenance
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @anchormem/anchor
+        run: npm publish --access public --provenance
+        working-directory: packages/anchor
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
