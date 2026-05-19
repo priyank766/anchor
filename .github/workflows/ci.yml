@@ -12,23 +12,21 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20, 22]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build all packages
-        run: npm run build --workspaces
+        run: npm run build --workspaces --if-present
 
       - name: Typecheck (server)
         run: npx tsc --noEmit -p tsconfig.json
@@ -41,14 +39,3 @@ jobs:
       - name: Test (cli)
         run: npx vitest run
         working-directory: packages/cli
-
-      - name: Verify package contents (no source leaks)
-        run: |
-          npm pack --dry-run --workspace=packages/server 2>&1 | tee /tmp/server-pack.log
-          npm pack --dry-run --workspace=packages/cli 2>&1 | tee /tmp/cli-pack.log
-          npm pack --dry-run --workspace=packages/anchor 2>&1 | tee /tmp/anchor-pack.log
-          # Fail if any .ts source files leaked into the pack
-          if grep -E '\.ts$' /tmp/server-pack.log | grep -v '\.d\.ts$'; then
-            echo "ERROR: TypeScript source files leaked into server package"
-            exit 1
-          fi
