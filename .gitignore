@@ -17,13 +17,6 @@ Thumbs.db
 .anchor-local/
 .openmem-local/
 
-# Claude Code workspace files (personal settings, hooks, transcripts)
-.claude/
-.claude.json
-.claude.json.backup
-
-# Internal-only assistant docs (not for the public repo)
-CLAUDE.md
 
 # Internal docs / plans / strategy — keep private
 docs/

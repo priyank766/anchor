@@ -92,13 +92,14 @@ export function compressToGist(rows: MemoryRow[], opts: CompressOptions): string
 }
 
 function formatLine(r: MemoryRow): string {
+  const stale = staleWarning(r);
   switch (r.type) {
     case "fact":
-      return `- ${r.content}`;
+      return stale ? `- ${r.content} _(${stale})_` : `- ${r.content}`;
     case "decision":
       return r.rationale
-        ? `- ${r.content} — _because_ ${r.rationale}`
-        : `- ${r.content}`;
+        ? `- ${r.content} — _because_ ${r.rationale}${stale ? ` _(${stale})_` : ""}`
+        : `- ${r.content}${stale ? ` _(${stale})_` : ""}`;
     case "episode": {
       const files = r.files && r.files.length ? ` [${r.files.slice(0, 3).join(", ")}]` : "";
       return `- ${r.content}${files}`;
@@ -106,4 +107,18 @@ function formatLine(r: MemoryRow): string {
     case "artifact":
       return r.note ? `- \`${r.ref}\` — ${r.note}` : `- \`${r.ref}\``;
   }
+}
+
+const STALE_THRESHOLD_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+
+// Returns a human-readable stale warning for facts/decisions that haven't
+// been verified (recalled) in over 14 days. Episodes and artifacts don't
+// get stale warnings — episodes decay via salience, artifacts are references.
+function staleWarning(r: MemoryRow): string | undefined {
+  if (r.type !== "fact" && r.type !== "decision") return undefined;
+  const lastVerified = r.lastVerifiedAt ?? r.updatedAt;
+  const ageMs = Date.now() - lastVerified;
+  if (ageMs < STALE_THRESHOLD_MS) return undefined;
+  const days = Math.floor(ageMs / (24 * 60 * 60 * 1000));
+  return `unverified for ${days}d`;
 }

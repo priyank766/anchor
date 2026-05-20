@@ -25,6 +25,8 @@ ${c.bold("Usage")}
                                 Backfill embeddings for memories missing them (requires ANCHOR_EMBED_PROVIDER)
   ${c.cyan("anchor doctor")}                Run diagnostics (db, scope, redaction)
   ${c.cyan("anchor hook")} <event>          Claude Code hook adapter (internal)
+  ${c.cyan("anchor diff")} [--since 1d] [--scope X]
+                                Show what changed in memory since a given time (default: 24h)
   ${c.cyan("anchor path")}                  Print the DB file path
   ${c.cyan("anchor help")}
 
@@ -193,6 +195,34 @@ async function main() {
       return;
     }
 
+    case "diff": {
+      const scopeArg = argFlag(rest, "--scope");
+      const sinceArg = argFlag(rest, "--since") ?? "1d";
+      const since = parseSince(sinceArg);
+      if (since === null) {
+        process.stderr.write(err(`invalid --since value: ${sinceArg} (use 1h, 1d, 7d, 30d, or ISO date)\n`));
+        process.exit(1);
+      }
+      const store = new Store(cfg);
+      const scopeRef = store.resolveScope(resolveDefaultScope(scopeArg));
+      const rows = store.diffSince(scopeRef.id, since);
+      store.close();
+      if (rows.length === 0) {
+        process.stdout.write(c.dim(`(no changes in scope "${scopeRef.name}" since ${new Date(since).toISOString().slice(0, 16)})\n`));
+        return;
+      }
+      process.stdout.write(`${c.bold(scopeRef.name)} ${c.dim(`— ${rows.length} change${rows.length === 1 ? "" : "s"} since ${new Date(since).toISOString().slice(0, 16)}`)}\n\n`);
+      for (const r of rows) {
+        const tag = typeColor(r.type);
+        const date = new Date(r.updatedAt).toISOString().slice(0, 16).replace("T", " ");
+        const isNew = r.createdAt >= since;
+        const marker = isNew ? c.green("+ ") : c.yellow("~ ");
+        process.stdout.write(`${marker}${tag}  ${c.dim(date)}  ${r.content.slice(0, 120)}\n`);
+        if (r.rationale) process.stdout.write(c.dim(`    ↳ ${r.rationale}\n`));
+      }
+      return;
+    }
+
     default:
       process.stderr.write(`unknown command: ${cmd}\n\n${HELP}`);
       process.exit(1);
@@ -281,6 +311,26 @@ function argFlag(argv: string[], name: string): string | undefined {
   const i = argv.indexOf(name);
   if (i === -1) return undefined;
   return argv[i + 1];
+}
+
+// Parse a --since value. Accepts:
+//   1h, 2h, 12h     → hours ago
+//   1d, 7d, 30d     → days ago
+//   2026-05-20       → ISO date
+//   2026-05-20T12:00 → ISO datetime
+function parseSince(s: string): number | null {
+  // Duration strings: Nh or Nd
+  const m = s.match(/^(\d+)([hd])$/i);
+  if (m) {
+    const n = parseInt(m[1]!, 10);
+    const unit = m[2]!.toLowerCase();
+    const ms = unit === "h" ? n * 60 * 60 * 1000 : n * 24 * 60 * 60 * 1000;
+    return Date.now() - ms;
+  }
+  // ISO date/datetime
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d.getTime();
+  return null;
 }
 
 main().catch((e) => {

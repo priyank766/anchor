@@ -31,6 +31,7 @@ export interface MemoryRow {
   note?: string;
   supersededBy?: string;
   salience?: number;
+  lastVerifiedAt?: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -383,7 +384,7 @@ export class Store {
 
     const facts = this.db
       .prepare(
-        `SELECT f.id, f.scope_id, f.source_id, f.content, f.superseded_by, f.created_at, f.updated_at,
+        `SELECT f.id, f.scope_id, f.source_id, f.content, f.superseded_by, f.last_verified_at, f.created_at, f.updated_at,
                 bm25(facts_fts) as rank
          FROM facts_fts JOIN facts f ON f.rowid = facts_fts.rowid
          WHERE facts_fts MATCH ? AND f.scope_id = ? AND f.superseded_by IS NULL
@@ -394,7 +395,7 @@ export class Store {
 
     const decisions = this.db
       .prepare(
-        `SELECT d.id, d.scope_id, d.source_id, d.content, d.rationale, d.superseded_by, d.created_at, d.updated_at,
+        `SELECT d.id, d.scope_id, d.source_id, d.content, d.rationale, d.superseded_by, d.last_verified_at, d.created_at, d.updated_at,
                 bm25(decisions_fts) as rank
          FROM decisions_fts JOIN decisions d ON d.rowid = decisions_fts.rowid
          WHERE decisions_fts MATCH ? AND d.scope_id = ? AND d.superseded_by IS NULL
@@ -426,6 +427,78 @@ export class Store {
     for (const r of artifacts) out.push(rowToMemory("artifact", r));
 
     return out;
+  }
+
+  // --- Salience boost + verification ------------------------------------
+
+  // Bump the base salience of episodes that were recalled. For facts/decisions
+  // this is a no-op (they don't carry salience); instead we use touchVerified.
+  bumpSalience(ids: string[], delta = 0.05): void {
+    if (ids.length === 0) return;
+    const stmt = this.db.prepare(
+      `UPDATE episodes SET salience = MIN(salience + ?, 2.0), updated_at = ? WHERE id = ?`
+    );
+    const now = Date.now();
+    const tx = this.db.transaction((list: string[]) => {
+      for (const id of list) stmt.run(delta, now, id);
+    });
+    tx(ids);
+  }
+
+  // Mark facts/decisions as "just verified" by setting last_verified_at = now.
+  // Called after recall so the stale-fact warning resets its timer.
+  touchVerified(ids: string[]): void {
+    if (ids.length === 0) return;
+    const now = Date.now();
+    const factStmt = this.db.prepare(
+      `UPDATE facts SET last_verified_at = ? WHERE id = ?`
+    );
+    const decisionStmt = this.db.prepare(
+      `UPDATE decisions SET last_verified_at = ? WHERE id = ?`
+    );
+    const tx = this.db.transaction((list: string[]) => {
+      for (const id of list) {
+        factStmt.run(now, id);
+        decisionStmt.run(now, id);
+      }
+    });
+    tx(ids);
+  }
+
+  // Return all memories created or updated since a given timestamp.
+  // Used by `anchor diff --since`.
+  diffSince(scopeId: string, since: number): MemoryRow[] {
+    const out: MemoryRow[] = [];
+
+    const facts = this.db.prepare(
+      `SELECT id, scope_id, source_id, content, superseded_by, last_verified_at, created_at, updated_at
+       FROM facts WHERE scope_id = ? AND (created_at >= ? OR updated_at >= ?) AND superseded_by IS NULL
+       ORDER BY updated_at DESC`
+    ).all(scopeId, since, since) as Record<string, unknown>[];
+    for (const r of facts) out.push(rowToMemory("fact", r));
+
+    const decisions = this.db.prepare(
+      `SELECT id, scope_id, source_id, content, rationale, superseded_by, last_verified_at, created_at, updated_at
+       FROM decisions WHERE scope_id = ? AND (created_at >= ? OR updated_at >= ?) AND superseded_by IS NULL
+       ORDER BY updated_at DESC`
+    ).all(scopeId, since, since) as Record<string, unknown>[];
+    for (const r of decisions) out.push(rowToMemory("decision", r));
+
+    const episodes = this.db.prepare(
+      `SELECT id, scope_id, source_id, summary, files, salience, created_at, updated_at
+       FROM episodes WHERE scope_id = ? AND (created_at >= ? OR updated_at >= ?)
+       ORDER BY updated_at DESC`
+    ).all(scopeId, since, since) as Record<string, unknown>[];
+    for (const r of episodes) out.push(rowToMemory("episode", r));
+
+    const artifacts = this.db.prepare(
+      `SELECT id, scope_id, source_id, ref, note, created_at, updated_at
+       FROM artifacts WHERE scope_id = ? AND (created_at >= ? OR updated_at >= ?)
+       ORDER BY updated_at DESC`
+    ).all(scopeId, since, since) as Record<string, unknown>[];
+    for (const r of artifacts) out.push(rowToMemory("artifact", r));
+
+    return out.sort((a, b) => a.updatedAt - b.updatedAt);
   }
 
   // --- Export / import ---------------------------------------------------
@@ -667,12 +740,17 @@ function rowToMemory(type: MemoryType, r: Record<string, unknown>): MemoryRow {
   };
   switch (type) {
     case "fact":
-      return { ...base, content: r["content"] as string };
+      return {
+        ...base,
+        content: r["content"] as string,
+        lastVerifiedAt: (r["last_verified_at"] as number | null) ?? undefined,
+      };
     case "decision":
       return {
         ...base,
         content: r["content"] as string,
         rationale: (r["rationale"] as string | null) ?? undefined,
+        lastVerifiedAt: (r["last_verified_at"] as number | null) ?? undefined,
       };
     case "episode": {
       const filesRaw = r["files"] as string | null;

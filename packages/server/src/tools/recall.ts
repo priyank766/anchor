@@ -47,6 +47,16 @@ export async function handleRecall(store: Store, raw: unknown) {
     budgetTokens: input.budgetTokens ?? cfg.defaultBudgetTokens,
     query: input.query,
   });
+
+  // Side-effect: recall is a signal that these memories are actively useful.
+  // Bump episode salience so frequently-recalled episodes resist decay.
+  // Touch facts/decisions so the stale-fact warning timer resets.
+  if (merged.length > 0) {
+    const ids = merged.map((r) => r.id);
+    store.bumpSalience(ids);
+    store.touchVerified(ids);
+  }
+
   return {
     scope: scope.name,
     query: input.query,

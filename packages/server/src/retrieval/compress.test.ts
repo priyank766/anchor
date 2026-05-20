@@ -14,6 +14,7 @@ function row(partial: Partial<MemoryRow> & Pick<MemoryRow, "type" | "content">):
     ref: partial.ref,
     note: partial.note,
     salience: partial.salience,
+    lastVerifiedAt: partial.lastVerifiedAt,
     createdAt: partial.createdAt ?? Date.now(),
     updatedAt: partial.updatedAt ?? Date.now(),
   };
@@ -73,5 +74,38 @@ describe("compressToGist", () => {
     const out = compressToGist(rows, { budgetTokens: 1500, query: "x" });
     expect(out).toMatch(/Sources:/);
     expect(out).toMatch(/untrusted memory/);
+  });
+
+  it("appends stale warning for facts older than 14 days", () => {
+    const twentyDaysAgo = Date.now() - 20 * 24 * 60 * 60 * 1000;
+    const rows: MemoryRow[] = [
+      row({ type: "fact", content: "old fact", updatedAt: twentyDaysAgo, createdAt: twentyDaysAgo }),
+    ];
+    const out = compressToGist(rows, { budgetTokens: 1500, query: "x" });
+    expect(out).toMatch(/unverified for \d+d/);
+  });
+
+  it("no stale warning for recently verified facts", () => {
+    const twentyDaysAgo = Date.now() - 20 * 24 * 60 * 60 * 1000;
+    const rows: MemoryRow[] = [
+      row({
+        type: "fact",
+        content: "verified fact",
+        updatedAt: twentyDaysAgo,
+        createdAt: twentyDaysAgo,
+        lastVerifiedAt: Date.now(), // just verified
+      }),
+    ];
+    const out = compressToGist(rows, { budgetTokens: 1500, query: "x" });
+    expect(out).not.toMatch(/unverified/);
+  });
+
+  it("no stale warning for episodes regardless of age", () => {
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const rows: MemoryRow[] = [
+      row({ type: "episode", content: "old episode", updatedAt: thirtyDaysAgo, createdAt: thirtyDaysAgo }),
+    ];
+    const out = compressToGist(rows, { budgetTokens: 1500, query: "x" });
+    expect(out).not.toMatch(/unverified/);
   });
 });

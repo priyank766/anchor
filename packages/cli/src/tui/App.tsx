@@ -38,12 +38,17 @@ export function App({ store, initialScope }: Props) {
     refreshStats();
   }, []);
 
-  const stats = useMemo((): { total: number; fact: number; decision: number; episode: number; artifact: number } => {
+  const stats = useMemo(() => {
     const ref = store.resolveScope(scope);
     const rows = store.listByScope(ref.id, undefined, 1000);
-    const c: Record<MemoryType, number> = { fact: 0, decision: 0, episode: 0, artifact: 0 };
-    for (const r of rows) c[r.type]++;
-    return { total: rows.length, ...c };
+    let fact = 0, decision = 0, episode = 0, artifact = 0;
+    for (const r of rows) {
+      if (r.type === "fact") fact++;
+      else if (r.type === "decision") decision++;
+      else if (r.type === "episode") episode++;
+      else if (r.type === "artifact") artifact++;
+    }
+    return { total: rows.length, fact, decision, episode, artifact };
   }, [scope, history.length]);
 
   function push(kind: HistoryEntry["kind"], text: string) {
