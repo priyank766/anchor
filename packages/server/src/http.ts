@@ -194,7 +194,7 @@ export async function startHttpServer(opts: HttpServerOptions): Promise<void> {
     // Health check — simple JSON liveness. No sensitive data.
     if (path === "/health" && req.method === "GET") {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ status: "ok", transport: "http", version: "0.0.1" }));
+      res.end(JSON.stringify({ status: "ok", transport: "http", version: "0.1.0" }));
       return;
     }
 

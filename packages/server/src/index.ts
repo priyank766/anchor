@@ -108,7 +108,7 @@ async function main() {
   const mode = detectTransport();
 
   const server = new Server(
-    { name: "anchor", version: "0.0.1" },
+    { name: "anchor", version: "0.1.0" },
     { capabilities: { tools: {} } }
   );
 
