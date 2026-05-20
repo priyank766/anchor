@@ -30,7 +30,7 @@ Both are installed on your `PATH` after `npm install -g @anchormem/anchor` (or u
 
 See the [main project README](https://github.com/priyank766/anchor#readme) for:
 
-- Connecting other agents (Codex, Cursor, Cline, Antigravity CLI, Continue.dev, Windsurf, OpenCode, Zed)
+- Connecting other agents (Codex, Cursor, Cline, Antigravity, Continue.dev, Windsurf, OpenCode, Zed)
 - Auto-loading project memory at session start (hooks)
 - Optional semantic recall via embeddings (Ollama, OpenAI, Gemini, Voyage)
 - Common commands
