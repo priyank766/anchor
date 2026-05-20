@@ -17,6 +17,8 @@ Thumbs.db
 .anchor-local/
 .openmem-local/
 
+# Eval results (auto-generated, changes every run)
+tests/eval/results/
 
 # Internal docs / plans / strategy — keep private
 docs/

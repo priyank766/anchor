@@ -37,7 +37,7 @@ packages/
 
 ## What we want help with
 
-- **More agent integrations.** Tested install snippets for Codex, Cursor, Cline, Gemini CLI, Continue.dev, Aider, Zed, Windsurf, OpenCode — anything that speaks MCP. PR adds to the README + a small writeup of any quirks.
+- **More agent integrations.** Tested install snippets for Codex, Cursor, Cline, Antigravity CLI, Continue.dev, Aider, Zed, Windsurf, OpenCode — anything that speaks MCP. PR adds to the README + a small writeup of any quirks.
 - **Secret redaction patterns.** New API key formats, new framework patterns, regression cases. Add the pattern + a unit test in `packages/server/src/capture/redact.ts` and `redact.test.ts`.
 - **Retrieval quality.** Better reranking heuristics, salience decay, supersession handling. Bring a benchmark, not just a vibe.
 - **Embedding adapters.** Optional, for users who want vector search. Local (Ollama) and hosted (OpenAI / Anthropic / Gemini) adapters behind the `EmbedProvider` interface.

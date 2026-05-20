@@ -4,7 +4,7 @@ This file is **gitignored**. It's the assistant's brain for this project. The pu
 
 ## What this project is
 
-**Anchor** — cross-agent memory layer. Local-first MCP server + open Agent Skill so any agent (Claude Code, Codex, Cursor, Cline, Gemini CLI, …) shares context across sessions.
+**Anchor** — cross-agent memory layer. Local-first MCP server + open Agent Skill so any agent (Claude Code, Codex, Cursor, Cline, Antigravity, …) shares context across sessions.
 
 The moat is **compressed, query-time retrieval** — not storage.
 

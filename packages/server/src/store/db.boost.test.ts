@@ -110,3 +110,59 @@ describe("diffSince", () => {
     expect(rows[0]!.updatedAt).toBeLessThanOrEqual(rows[1]!.updatedAt);
   });
 });
+
+describe("replay", () => {
+  let store: Store;
+  beforeEach(() => { store = newStore(); });
+
+  it("interleaves decisions and episodes chronologically", () => {
+    const scope = store.resolveScope("test");
+    const src = store.recordSource({ agent: "t", deviceId: "d" });
+
+    store.insertDecision({ scopeId: scope.id, sourceId: src, content: "use SQLite", rationale: "simple" });
+    store.insertEpisode({ scopeId: scope.id, sourceId: src, summary: "set up database" });
+    store.insertDecision({ scopeId: scope.id, sourceId: src, content: "add WAL mode" });
+    store.insertEpisode({ scopeId: scope.id, sourceId: src, summary: "ran benchmarks" });
+
+    const rows = store.replay(scope.id);
+    expect(rows.length).toBe(4);
+    // Should be chronological
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i]!.createdAt).toBeGreaterThanOrEqual(rows[i - 1]!.createdAt);
+    }
+    // Mix of types
+    const types = rows.map(r => r.type);
+    expect(types).toContain("decision");
+    expect(types).toContain("episode");
+  });
+
+  it("respects limit", () => {
+    const scope = store.resolveScope("test");
+    const src = store.recordSource({ agent: "t", deviceId: "d" });
+    for (let i = 0; i < 10; i++) {
+      store.insertEpisode({ scopeId: scope.id, sourceId: src, summary: `episode ${i}` });
+    }
+    const rows = store.replay(scope.id, 3);
+    expect(rows.length).toBe(3);
+  });
+
+  it("returns empty for empty scope", () => {
+    const scope = store.resolveScope("empty");
+    const rows = store.replay(scope.id);
+    expect(rows.length).toBe(0);
+  });
+
+  it("excludes superseded decisions", () => {
+    const scope = store.resolveScope("test");
+    const src = store.recordSource({ agent: "t", deviceId: "d" });
+
+    const oldId = store.insertDecision({ scopeId: scope.id, sourceId: src, content: "use MySQL" });
+    const newId = store.insertDecision({ scopeId: scope.id, sourceId: src, content: "use Postgres" });
+    store.markSuperseded(oldId, newId);
+
+    const rows = store.replay(scope.id);
+    expect(rows.length).toBe(1);
+    expect(rows[0]!.content).toBe("use Postgres");
+  });
+});
+

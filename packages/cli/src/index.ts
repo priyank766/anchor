@@ -27,6 +27,8 @@ ${c.bold("Usage")}
   ${c.cyan("anchor hook")} <event>          Claude Code hook adapter (internal)
   ${c.cyan("anchor diff")} [--since 1d] [--scope X]
                                 Show what changed in memory since a given time (default: 24h)
+  ${c.cyan("anchor replay")} [--scope X] [--limit N]
+                                Reconstruct a chronological narrative from episodes + decisions
   ${c.cyan("anchor path")}                  Print the DB file path
   ${c.cyan("anchor help")}
 
@@ -187,7 +189,7 @@ async function main() {
 
     case "hook": {
       if (rest.length === 0) {
-        process.stderr.write(err("usage: anchor hook <agent> <event>  (agent ∈ claude-code|gemini|codex|opencode|hermes|generic)\n"));
+        process.stderr.write(err("usage: anchor hook <agent> <event>  (claude-code|antigravity|codex|opencode|hermes|generic)\n"));
         process.exit(1);
       }
       const { runHook } = await import("./hook.js");
@@ -220,6 +222,39 @@ async function main() {
         process.stdout.write(`${marker}${tag}  ${c.dim(date)}  ${r.content.slice(0, 120)}\n`);
         if (r.rationale) process.stdout.write(c.dim(`    ↳ ${r.rationale}\n`));
       }
+      return;
+    }
+
+    case "replay": {
+      const scopeArg = argFlag(rest, "--scope");
+      const limitArg = argFlag(rest, "--limit");
+      const limit = limitArg ? parseInt(limitArg, 10) : 200;
+      const store = new Store(cfg);
+      const scopeRef = store.resolveScope(resolveDefaultScope(scopeArg));
+      const rows = store.replay(scopeRef.id, limit);
+      store.close();
+      if (rows.length === 0) {
+        process.stdout.write(c.dim(`(no episodes or decisions in scope "${scopeRef.name}")\n`));
+        return;
+      }
+      process.stdout.write(banner());
+      process.stdout.write(`${c.bold("Replay")} ${c.dim(`— ${scopeRef.name} — ${rows.length} event${rows.length === 1 ? "" : "s"}`)}\n\n`);
+      let prevDate = "";
+      for (const r of rows) {
+        const date = new Date(r.createdAt).toISOString().slice(0, 10);
+        const time = new Date(r.createdAt).toISOString().slice(11, 16);
+        // Print date headers when day changes
+        if (date !== prevDate) {
+          process.stdout.write(`\n${c.bold(c.cyan(`── ${date} ──`))}\n`);
+          prevDate = date;
+        }
+        const icon = r.type === "decision" ? c.magenta("◆") : c.blue("●");
+        const tag = r.type === "decision" ? c.magenta("decided") : c.blue("episode");
+        process.stdout.write(`  ${c.dim(time)}  ${icon} ${tag}  ${r.content.slice(0, 120)}\n`);
+        if (r.rationale) process.stdout.write(c.dim(`           ↳ ${r.rationale}\n`));
+        if (r.files && r.files.length) process.stdout.write(c.dim(`           files: ${r.files.slice(0, 5).join(", ")}\n`));
+      }
+      process.stdout.write("\n");
       return;
     }
 

@@ -4,7 +4,7 @@
 
 <p><strong>Cross-agent memory for AI coding agents. Local-first.</strong></p>
 
-<p>Switch agents — Claude Code, Codex, Cursor, Cline, Gemini CLI — and your project context comes with you.</p>
+<p>Switch agents — Claude Code, Codex, Cursor, Cline, Antigravity — and your project context comes with you.</p>
 
 <p>
   <a href="https://www.npmjs.com/package/@anchormem/anchor"><img alt="npm" src="https://img.shields.io/npm/v/@anchormem/anchor?color=06b6d4&label=npm&labelColor=11161d"></a>
@@ -89,7 +89,7 @@ That's it. Your next session can call `memory_recall` and `memory_remember` auto
 > Verify everything is wired up: `claude mcp list` should show `anchor: ✓ Connected`, and `anchor doctor` reports the status of your data dir, scope detection, redaction, and agent config.
 
 <details>
-<summary><b>Other agents</b> (Codex, Cursor, Cline, Continue.dev, Windsurf, OpenCode, Zed, Gemini CLI)</summary>
+<summary><b>Other agents</b> (Codex, Cursor, Cline, Continue.dev, Windsurf, OpenCode, Zed, Antigravity CLI)</summary>
 
 ### Codex CLI
 
@@ -110,7 +110,7 @@ command = "anchor-server"
 }
 ```
 
-### Cline · Continue.dev · Windsurf · OpenCode · Zed · Gemini CLI
+### Cline · Continue.dev · Windsurf · OpenCode · Zed · Antigravity CLI
 
 Each accepts an MCP server entry. Use `command: anchor-server` and refer to the host's MCP documentation for the configuration file location. PRs welcome with tested snippets — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -138,7 +138,7 @@ For other agents, pipe the plain-text output into the agent's system-prompt flag
 echo '{"cwd":"'"$PWD"'"}' | anchor hook generic session-start
 ```
 
-When the project scope has no memories, the hook emits nothing — Anchor never wastes the agent's context budget. Supported flavors: `claude-code`, `gemini`, `codex`, `opencode`, `hermes`, `generic`.
+When the project scope has no memories, the hook emits nothing — Anchor never wastes the agent's context budget. Supported flavors: `claude-code`, `antigravity`, `codex`, `opencode`, `hermes`, `generic`.
 
 </details>
 
@@ -193,7 +193,7 @@ flowchart TB
         A1[Claude Code]
         A2[Codex CLI]
         A3[Cursor]
-        A4[Gemini CLI]
+        A4[Antigravity]
         A5[Cline / Continue / ...]
     end
 
@@ -262,6 +262,36 @@ Tested at scale on Windows 11 / Node 22, fresh SQLite, BM25 only:
 
 Recall stays under 4 ms p95 at 10,000 memories. Reproducible via `node packages/server/dist/bench/bench.js`.
 
+### Cold vs Warm — retrieval quality benchmark
+
+8 real-world project scenarios across backend, mobile, DevOps, ML, and security. Measures how much context Anchor saves vs raw transcript paste.
+
+| Metric | Result |
+|--------|-------:|
+| **Avg token reduction** | **97.7%** |
+| **Retrieval hit rate** | **100%** (8/8 perfect) |
+| **BM25 precision** | **82.9%** |
+| **Aggregate: 98,200 cold → 2,239 warm tokens** | **44× compression** |
+| **Information leaks** | **0** |
+
+<details>
+<summary><b>Per-scenario breakdown</b></summary>
+
+| Scenario | Category | Cold | Warm | Reduction | Hit Rate |
+|----------|----------|-----:|-----:|----------:|---------:|
+| Auth rate limiting | Backend API | 9,400 | 224 | 97.6% | 5/5 |
+| Stripe billing migration | SaaS Payments | 7,800 | 163 | 97.9% | 3/3 |
+| Turborepo monorepo | Infrastructure | 12,500 | 304 | 97.6% | 6/6 |
+| ML pipeline debugging | ML/Data | 15,000 | 334 | 97.8% | 6/6 |
+| React Native state mgmt | Mobile | 11,200 | 271 | 97.6% | 5/5 |
+| EC2 → Kubernetes | DevOps | 13,800 | 330 | 97.6% | 6/6 |
+| Security audit remediation | Security | 10,500 | 276 | 97.4% | 6/6 |
+| MySQL → PostgreSQL | Database | 18,000 | 337 | 98.1% | 6/6 |
+
+</details>
+
+Reproducible via `node tests/eval/run.mjs`. See [tests/eval/](tests/eval/) for scenarios and methodology.
+
 ---
 
 ## Common commands
@@ -271,6 +301,8 @@ anchor                  Interactive console (search, recall, remember, browse)
 anchor init             Initialize ~/.anchor (idempotent)
 anchor status           What's stored, where
 anchor list             Print memories in the current scope
+anchor diff --since 1d  Show what changed in memory (1h, 7d, 30d, or ISO date)
+anchor replay           Chronological narrative of decisions + episodes
 anchor doctor           Diagnose db, scope, redaction, agent config
 anchor export > a.json  Back up to JSON
 anchor import a.json    Restore from JSON (idempotent)
@@ -389,7 +421,7 @@ Phases 0–1 complete. Phase 2 (distribution + polish) is in progress:
 - ✓ Four memory types · BM25 retrieval · hybrid (BM25 + vector) via four embedding providers
 - ✓ Secret redaction · prompt-injection scrubbing · scope isolation · 0700 data dir
 - ✓ Salience decay · supersession · export/import · `anchor doctor`
-- ✓ Universal session lifecycle hooks — session-start, stop/end, pre-compact (Claude Code, Gemini, Codex, OpenCode, Hermes, generic)
+- ✓ Universal session lifecycle hooks — session-start, stop/end, pre-compact (Claude Code, Antigravity, Codex, OpenCode, Hermes, generic)
 - ✓ HTTP transport mode with security hardening (DNS rebinding protection, rate limiting, CORS)
 - ✓ Reproducible offline benchmark — **97% token-cost reduction** vs transcript paste
 - ✓ Published to npm — `@anchormem/{server, cli, anchor}@0.0.1`

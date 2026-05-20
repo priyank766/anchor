@@ -69,11 +69,11 @@ describe("anchor hook (universal)", () => {
     expect(parsed.hookSpecificOutput.additionalContext).toContain("Anchor memory");
   });
 
-  it("emits plain text for gemini, codex, opencode, hermes, generic", async () => {
+  it("emits plain text for antigravity, gemini, codex, opencode, hermes, generic", async () => {
     const scopePath = "/tmp/anchor-test-scope-generic";
     seedScope(scopePath, "deploys to Cloudflare Workers");
 
-    for (const flavor of ["gemini", "codex", "opencode", "hermes", "generic"]) {
+    for (const flavor of ["antigravity", "gemini", "codex", "opencode", "hermes", "generic"]) {
       captured = "";
       await runHookWith(
         [flavor, "session-start"],

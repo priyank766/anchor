@@ -501,6 +501,29 @@ export class Store {
     return out.sort((a, b) => a.updatedAt - b.updatedAt);
   }
 
+  // Return episodes and decisions in chronological order for a scope.
+  // Used by `anchor replay` to reconstruct a project narrative.
+  replay(scopeId: string, limit = 200): MemoryRow[] {
+    const out: MemoryRow[] = [];
+
+    const decisions = this.db.prepare(
+      `SELECT id, scope_id, source_id, content, rationale, superseded_by, last_verified_at, created_at, updated_at
+       FROM decisions WHERE scope_id = ? AND superseded_by IS NULL
+       ORDER BY created_at ASC LIMIT ?`
+    ).all(scopeId, limit) as Record<string, unknown>[];
+    for (const r of decisions) out.push(rowToMemory("decision", r));
+
+    const episodes = this.db.prepare(
+      `SELECT id, scope_id, source_id, summary, files, salience, created_at, updated_at
+       FROM episodes WHERE scope_id = ?
+       ORDER BY created_at ASC LIMIT ?`
+    ).all(scopeId, limit) as Record<string, unknown>[];
+    for (const r of episodes) out.push(rowToMemory("episode", r));
+
+    // Interleave chronologically — the whole point of replay.
+    return out.sort((a, b) => a.createdAt - b.createdAt).slice(0, limit);
+  }
+
   // --- Export / import ---------------------------------------------------
 
   exportAll(scopeId?: string, opts: { anonymize?: boolean } = {}): ExportPayload {
@@ -716,16 +739,28 @@ function anonymize(p: ExportPayload): void {
   p.exportedAt = 0;
 }
 
-// Score a row for retrieval ranking: episodes use decayed salience; everything
-// else uses recency directly. Higher = more relevant.
+// Score a row for retrieval ranking. Each type has its own decay behaviour:
+//   - episodes:  30-day halflife via stored salience (existing logic)
+//   - facts:     120-day halflife — stable knowledge fades very slowly
+//   - decisions: no time decay — decisions stay relevant until superseded
+//   - artifacts: 120-day halflife — reference material, same as facts
+// Higher = more relevant.
+const HALFLIFE_30D = 30 * 24 * 60 * 60 * 1000;
+const HALFLIFE_120D = 120 * 24 * 60 * 60 * 1000;
+
 function rowScore(r: MemoryRow, now: number): number {
-  if (r.type === "episode") {
-    return effectiveSalience(r.salience ?? 1, r.updatedAt, now);
-  }
-  // Recency normalized to 0..1-ish so it's comparable across types.
-  // Anchor's rerank doesn't care about absolute scale; only relative order.
   const ageMs = Math.max(0, now - r.updatedAt);
-  return 1 / (1 + ageMs / (30 * 24 * 60 * 60 * 1000));
+  switch (r.type) {
+    case "episode":
+      return effectiveSalience(r.salience ?? 1, r.updatedAt, now);
+    case "decision":
+      // Decisions don't decay — they remain relevant until explicitly superseded.
+      return 1.0;
+    case "fact":
+    case "artifact":
+      // Slow decay: 120-day halflife keeps stable knowledge around.
+      return 1 / (1 + ageMs / HALFLIFE_120D);
+  }
 }
 
 function rowToMemory(type: MemoryType, r: Record<string, unknown>): MemoryRow {

@@ -6,13 +6,14 @@
 // formats the output to match each agent's expected hook interface.
 //
 // Supported agents:
-//   claude-code  → JSON to stdout: { hookSpecificOutput.additionalContext }
-//                  Wire in ~/.claude/settings.json under hooks.SessionStart.
-//   gemini       → plain text to stdout (Gemini CLI accepts piped context).
-//   codex        → plain text to stdout (Codex `--system` flag or stdin).
-//   opencode     → plain text to stdout.
-//   hermes       → plain text to stdout.
-//   generic      → plain text to stdout. Default for any unknown agent.
+//   claude-code   → JSON to stdout: { hookSpecificOutput.additionalContext }
+//                   Wire in ~/.claude/settings.json under hooks.SessionStart.
+//   antigravity   → plain text to stdout (Antigravity CLI accepts piped context).
+//   gemini        → alias for antigravity (backward compat; Gemini CLI was renamed).
+//   codex         → plain text to stdout (Codex `--system` flag or stdin).
+//   opencode      → plain text to stdout.
+//   hermes        → plain text to stdout.
+//   generic       → plain text to stdout. Default for any unknown agent.
 //
 // Supported events:
 //   session-start  → recall + inject (the headline use case)
@@ -38,7 +39,8 @@ interface HookPayload {
 
 type AgentFlavor =
   | "claude-code"
-  | "gemini"
+  | "antigravity"
+  | "gemini"       // backward compat alias for antigravity
   | "codex"
   | "opencode"
   | "hermes"
@@ -46,6 +48,7 @@ type AgentFlavor =
 
 const KNOWN_AGENTS: AgentFlavor[] = [
   "claude-code",
+  "antigravity",
   "gemini",
   "codex",
   "opencode",
@@ -205,6 +208,7 @@ function emitForAgent(agent: AgentFlavor, body: string): void {
       process.stdout.write(JSON.stringify(output));
       return;
     }
+    case "antigravity":
     case "gemini":
     case "codex":
     case "opencode":
