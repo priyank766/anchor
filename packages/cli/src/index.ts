@@ -4,16 +4,19 @@ import { Store } from "@anchormem/server/store/db";
 import { handleList } from "@anchormem/server/tools/list";
 import { redact } from "@anchormem/server/capture/redact";
 import { resolveDefaultScope, findGitRoot } from "@anchormem/server/scope";
-import { readFileSync, writeFileSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, statSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { banner, c, kv, ok, warn, err } from "./ui.js";
+import { TOOLS, ANCHOR_MCP_ENTRY, ANCHOR_SERVER_KEY } from "./tools-registry.js";
+import { writeMcpEntry, hasAnchorEntry } from "./config-writer.js";
 
 const HELP = `${banner()}
 ${c.bold("Usage")}
   ${c.cyan("anchor")}                       Open the interactive memory console
   ${c.cyan("anchor browse")} [--scope X]    Same as above
-  ${c.cyan("anchor init")}                  Create the data dir and DB at ~/.anchor
+  ${c.cyan("anchor init")}                  Initialize Anchor + auto-register in all detected tools
+  ${c.cyan("anchor setup")}                 Generate project-level MCP configs for team sharing
   ${c.cyan("anchor status")}                Show config and DB stats
   ${c.cyan("anchor list")} [--scope X]      List memories in a scope
   ${c.cyan("anchor export")} [--scope X] [--anonymize]
@@ -23,7 +26,7 @@ ${c.bold("Usage")}
                                 Delete episodes whose effective salience is below N (default 0.1)
   ${c.cyan("anchor reembed")} [--scope X] [--limit N]
                                 Backfill embeddings for memories missing them (requires ANCHOR_EMBED_PROVIDER)
-  ${c.cyan("anchor doctor")}                Run diagnostics (db, scope, redaction)
+  ${c.cyan("anchor doctor")}                Run diagnostics (db, scope, redaction, tool registration)
   ${c.cyan("anchor hook")} <event>          Claude Code hook adapter (internal)
   ${c.cyan("anchor diff")} [--since 1d] [--scope X]
                                 Show what changed in memory since a given time (default: 24h)
@@ -55,11 +58,51 @@ async function main() {
     }
 
     case "init": {
+      // 1. Create ~/.anchor/ and DB (original behavior)
       const store = new Store(cfg);
       store.close();
       process.stdout.write(banner());
       process.stdout.write(ok(`Initialized at ${c.cyan(cfg.dataDir)}\n`));
-      process.stdout.write(c.dim(`  next: configure your agent to talk to anchor-server\n`));
+
+      // 2. Auto-register MCP server in all detected tools
+      process.stdout.write("\n" + c.bold("Registering MCP server in detected tools…\n\n"));
+      let registered = 0;
+      for (const tool of TOOLS) {
+        const detected = tool.detect();
+        if (!detected) {
+          process.stdout.write(c.dim(`  – ${tool.name.padEnd(18)} not detected\n`));
+          continue;
+        }
+        const configPath = tool.globalConfigPath();
+        if (!configPath) {
+          process.stdout.write(c.dim(`  – ${tool.name.padEnd(18)} no global config path\n`));
+          continue;
+        }
+        const result = writeMcpEntry(configPath, ANCHOR_SERVER_KEY, ANCHOR_MCP_ENTRY, tool.format);
+        switch (result.status) {
+          case "created":
+          case "merged":
+            process.stdout.write(ok(`${tool.name.padEnd(18)} registered ${c.green("✓")}\n`));
+            registered++;
+            break;
+          case "skipped":
+            process.stdout.write(c.dim(`  – ${tool.name.padEnd(18)} already configured\n`));
+            break;
+          case "error":
+            process.stdout.write(warn(`${tool.name.padEnd(18)} ${result.error ?? "failed"}\n`));
+            break;
+        }
+      }
+
+      process.stdout.write("\n");
+      if (registered > 0) {
+        process.stdout.write(
+          ok(`Registered in ${c.bold(String(registered))} tool${registered === 1 ? "" : "s"}. You're all set!\n`),
+        );
+      } else {
+        process.stdout.write(c.dim("No new tools configured. Run 'anchor doctor' to check status.\n"));
+      }
+      process.stdout.write(c.dim(`\nTip: run ${c.cyan("anchor setup")} to generate project-level configs for team sharing.\n`));
       return;
     }
 
@@ -131,6 +174,22 @@ async function main() {
           `imported ${c.bold(String(result.imported))} ${c.dim(`(${result.skipped} already present)`)}\n`
         )
       );
+      return;
+    }
+
+    case "setup": {
+      const { runSetup, printSetupResults } = await import("./setup.js");
+      const projectRoot = findGitRoot(process.cwd()) ?? process.cwd();
+
+      // Also ensure ~/.anchor/ exists (run init if needed)
+      if (!existsSync(cfg.dataDir)) {
+        const initStore = new Store(cfg);
+        initStore.close();
+        process.stdout.write(ok(`Initialized at ${c.cyan(cfg.dataDir)}\n\n`));
+      }
+
+      const result = runSetup({ projectRoot });
+      printSetupResults(result);
       return;
     }
 
@@ -309,19 +368,45 @@ function runDoctor(cfg: ReturnType<typeof loadConfig>) {
     process.stdout.write(err(`redaction self-test failed: only matched ${probe.redacted.join(", ")}\n`));
   }
 
-  // 5. MCP registration hint (best-effort, not a probe)
-  const claudeJson = join(homedir(), ".claude.json");
-  try {
-    const cfgRaw = readFileSync(claudeJson, "utf8");
-    if (cfgRaw.includes('"anchor"') || cfgRaw.includes("anchor-server")) {
-      process.stdout.write(ok(`Claude Code: anchor entry detected in ${claudeJson}\n`));
+  // 5. MCP registration check — all tools
+  process.stdout.write("\n" + c.bold("MCP Registration\n"));
+  for (const tool of TOOLS) {
+    const detected = tool.detect();
+    if (!detected) {
+      process.stdout.write(c.dim(`  – ${tool.name.padEnd(18)} not installed\n`));
+      continue;
+    }
+    const configPath = tool.globalConfigPath();
+    if (!configPath) continue;
+    const registered = hasAnchorEntry(configPath, ANCHOR_SERVER_KEY, tool.format);
+    if (registered) {
+      process.stdout.write(ok(`${tool.name.padEnd(18)} anchor registered ${c.green("✓")}\n`));
     } else {
       process.stdout.write(
-        warn(`Claude Code config exists but no anchor entry found. Run: ${c.cyan("claude mcp add anchor -- anchor-server")}\n`)
+        warn(`${tool.name.padEnd(18)} detected but anchor not registered. Run: ${c.cyan("anchor init")}\n`),
       );
     }
-  } catch {
-    process.stdout.write(c.dim(`(no ~/.claude.json — Claude Code may not be installed)\n`));
+  }
+
+  // 6. Project-level config check
+  const projectRoot = findGitRoot(process.cwd());
+  if (projectRoot) {
+    process.stdout.write("\n" + c.bold("Project Configs\n"));
+    const projectTools = TOOLS.filter((t) => t.projectConfigPath() !== null);
+    let hasAny = false;
+    for (const tool of projectTools) {
+      const relPath = tool.projectConfigPath()!;
+      const absPath = join(projectRoot, relPath);
+      if (existsSync(absPath)) {
+        process.stdout.write(ok(`${relPath.padEnd(28)} ${c.dim(`(${tool.name})`)} ${c.green("✓")}\n`));
+        hasAny = true;
+      }
+    }
+    if (!hasAny) {
+      process.stdout.write(
+        c.dim(`  No project-level configs found. Run ${c.cyan("anchor setup")} to generate.\n`),
+      );
+    }
   }
 
   process.stdout.write("\n" + c.dim("doctor complete.\n"));

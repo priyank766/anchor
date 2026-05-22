@@ -126,4 +126,34 @@ describe("handleRemember", () => {
     expect(hits.length).toBe(1);
     expect(hits[0]!.content).toContain("Kubernetes");
   });
+
+  it("detects and stores language during remember", async () => {
+    const result = await handleRemember(store, {
+      type: "fact",
+      content: "We use typescript for all frontend modules",
+      files: ["src/app.ts"],
+      scope: "test-project",
+      agent: "test",
+    });
+    expect(result.id).toBeDefined();
+
+    const scope = store.resolveScope("test-project");
+    const rows = store.listByScope(scope.id, "fact", 10);
+    expect(rows[0]!.language).toBe("typescript");
+  });
+
+  it("stores explicitly specified language", async () => {
+    const result = await handleRemember(store, {
+      type: "fact",
+      content: "General architecture guidelines",
+      language: "rust",
+      scope: "test-project",
+      agent: "test",
+    });
+    expect(result.id).toBeDefined();
+
+    const scope = store.resolveScope("test-project");
+    const rows = store.listByScope(scope.id, "fact", 10);
+    expect(rows[0]!.language).toBe("rust");
+  });
 });

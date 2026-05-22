@@ -32,6 +32,7 @@ export interface MemoryRow {
   supersededBy?: string;
   salience?: number;
   lastVerifiedAt?: number;
+  language?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -44,6 +45,15 @@ export class Store {
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
     this.db.exec(SCHEMA_SQL);
+
+    // Backward compatibility: automatically alter existing tables to add the language column if needed
+    for (const table of ["facts", "decisions", "episodes", "artifacts"]) {
+      try {
+        this.db.exec(`ALTER TABLE ${table} ADD COLUMN language TEXT`);
+      } catch (e) {
+        // Column already exists or table doesn't exist yet, safe to swallow
+      }
+    }
   }
 
   // --- Scopes -------------------------------------------------------------
@@ -93,15 +103,16 @@ export class Store {
     scopeId: string;
     sourceId: string;
     content: string;
+    language?: string;
   }): string {
     const id = randomUUID();
     const now = Date.now();
     this.db
       .prepare(
-        `INSERT INTO facts (id, scope_id, source_id, content, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`
+        `INSERT INTO facts (id, scope_id, source_id, content, language, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(id, args.scopeId, args.sourceId, args.content, now, now);
+      .run(id, args.scopeId, args.sourceId, args.content, args.language ?? null, now, now);
     return id;
   }
 
@@ -110,15 +121,16 @@ export class Store {
     sourceId: string;
     content: string;
     rationale?: string;
+    language?: string;
   }): string {
     const id = randomUUID();
     const now = Date.now();
     this.db
       .prepare(
-        `INSERT INTO decisions (id, scope_id, source_id, content, rationale, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO decisions (id, scope_id, source_id, content, rationale, language, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(id, args.scopeId, args.sourceId, args.content, args.rationale ?? null, now, now);
+      .run(id, args.scopeId, args.sourceId, args.content, args.rationale ?? null, args.language ?? null, now, now);
     return id;
   }
 
@@ -127,13 +139,14 @@ export class Store {
     sourceId: string;
     summary: string;
     files?: string[];
+    language?: string;
   }): string {
     const id = randomUUID();
     const now = Date.now();
     this.db
       .prepare(
-        `INSERT INTO episodes (id, scope_id, source_id, summary, files, salience, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 1.0, ?, ?)`
+        `INSERT INTO episodes (id, scope_id, source_id, summary, files, salience, language, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 1.0, ?, ?, ?)`
       )
       .run(
         id,
@@ -141,6 +154,7 @@ export class Store {
         args.sourceId,
         args.summary,
         args.files ? JSON.stringify(args.files) : null,
+        args.language ?? null,
         now,
         now
       );
@@ -152,15 +166,16 @@ export class Store {
     sourceId: string;
     ref: string;
     note?: string;
+    language?: string;
   }): string {
     const id = randomUUID();
     const now = Date.now();
     this.db
       .prepare(
-        `INSERT INTO artifacts (id, scope_id, source_id, ref, note, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO artifacts (id, scope_id, source_id, ref, note, language, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(id, args.scopeId, args.sourceId, args.ref, args.note ?? null, now, now);
+      .run(id, args.scopeId, args.sourceId, args.ref, args.note ?? null, args.language ?? null, now, now);
     return id;
   }
 
@@ -260,10 +275,10 @@ export class Store {
 
   private fetchSingle(type: MemoryType, id: string): MemoryRow | null {
     const sqls: Record<MemoryType, string> = {
-      fact: `SELECT id, scope_id, source_id, content, superseded_by, created_at, updated_at FROM facts WHERE id = ? AND superseded_by IS NULL`,
-      decision: `SELECT id, scope_id, source_id, content, rationale, superseded_by, created_at, updated_at FROM decisions WHERE id = ? AND superseded_by IS NULL`,
-      episode: `SELECT id, scope_id, source_id, summary, files, salience, created_at, updated_at FROM episodes WHERE id = ?`,
-      artifact: `SELECT id, scope_id, source_id, ref, note, created_at, updated_at FROM artifacts WHERE id = ?`,
+      fact: `SELECT id, scope_id, source_id, content, superseded_by, language, created_at, updated_at FROM facts WHERE id = ? AND superseded_by IS NULL`,
+      decision: `SELECT id, scope_id, source_id, content, rationale, superseded_by, language, created_at, updated_at FROM decisions WHERE id = ? AND superseded_by IS NULL`,
+      episode: `SELECT id, scope_id, source_id, summary, files, salience, language, created_at, updated_at FROM episodes WHERE id = ?`,
+      artifact: `SELECT id, scope_id, source_id, ref, note, language, created_at, updated_at FROM artifacts WHERE id = ?`,
     };
     const r = this.db.prepare(sqls[type]).get(id) as Record<string, unknown> | undefined;
     return r ? rowToMemory(type, r) : null;
@@ -314,23 +329,23 @@ export class Store {
 
   // --- Reads --------------------------------------------------------------
 
-  listByScope(scopeId: string, type?: MemoryType, limit = 100): MemoryRow[] {
+  listByScope(scopeId: string, type?: MemoryType, limit = 100, activeLanguages?: string[]): MemoryRow[] {
     const tables: { type: MemoryType; sql: string }[] = [
       {
         type: "fact",
-        sql: `SELECT id, scope_id, source_id, content, superseded_by, created_at, updated_at FROM facts WHERE scope_id = ? AND superseded_by IS NULL ORDER BY updated_at DESC LIMIT ?`,
+        sql: `SELECT id, scope_id, source_id, content, superseded_by, language, created_at, updated_at FROM facts WHERE scope_id = ? AND superseded_by IS NULL ORDER BY updated_at DESC LIMIT ?`,
       },
       {
         type: "decision",
-        sql: `SELECT id, scope_id, source_id, content, rationale, superseded_by, created_at, updated_at FROM decisions WHERE scope_id = ? AND superseded_by IS NULL ORDER BY updated_at DESC LIMIT ?`,
+        sql: `SELECT id, scope_id, source_id, content, rationale, superseded_by, language, created_at, updated_at FROM decisions WHERE scope_id = ? AND superseded_by IS NULL ORDER BY updated_at DESC LIMIT ?`,
       },
       {
         type: "episode",
-        sql: `SELECT id, scope_id, source_id, summary, files, salience, created_at, updated_at FROM episodes WHERE scope_id = ? ORDER BY updated_at DESC LIMIT ?`,
+        sql: `SELECT id, scope_id, source_id, summary, files, salience, language, created_at, updated_at FROM episodes WHERE scope_id = ? ORDER BY updated_at DESC LIMIT ?`,
       },
       {
         type: "artifact",
-        sql: `SELECT id, scope_id, source_id, ref, note, created_at, updated_at FROM artifacts WHERE scope_id = ? ORDER BY updated_at DESC LIMIT ?`,
+        sql: `SELECT id, scope_id, source_id, ref, note, language, created_at, updated_at FROM artifacts WHERE scope_id = ? ORDER BY updated_at DESC LIMIT ?`,
       },
     ];
 
@@ -348,7 +363,7 @@ export class Store {
     // recency-decay term.
     const now = Date.now();
     return rows
-      .sort((a, b) => rowScore(b, now) - rowScore(a, now))
+      .sort((a, b) => rowScore(b, now, activeLanguages) - rowScore(a, now, activeLanguages))
       .slice(0, limit);
   }
 
@@ -384,7 +399,7 @@ export class Store {
 
     const facts = this.db
       .prepare(
-        `SELECT f.id, f.scope_id, f.source_id, f.content, f.superseded_by, f.last_verified_at, f.created_at, f.updated_at,
+        `SELECT f.id, f.scope_id, f.source_id, f.content, f.superseded_by, f.language, f.last_verified_at, f.created_at, f.updated_at,
                 bm25(facts_fts) as rank
          FROM facts_fts JOIN facts f ON f.rowid = facts_fts.rowid
          WHERE facts_fts MATCH ? AND f.scope_id = ? AND f.superseded_by IS NULL
@@ -395,7 +410,7 @@ export class Store {
 
     const decisions = this.db
       .prepare(
-        `SELECT d.id, d.scope_id, d.source_id, d.content, d.rationale, d.superseded_by, d.last_verified_at, d.created_at, d.updated_at,
+        `SELECT d.id, d.scope_id, d.source_id, d.content, d.rationale, d.superseded_by, d.language, d.last_verified_at, d.created_at, d.updated_at,
                 bm25(decisions_fts) as rank
          FROM decisions_fts JOIN decisions d ON d.rowid = decisions_fts.rowid
          WHERE decisions_fts MATCH ? AND d.scope_id = ? AND d.superseded_by IS NULL
@@ -406,7 +421,7 @@ export class Store {
 
     const episodes = this.db
       .prepare(
-        `SELECT e.id, e.scope_id, e.source_id, e.summary, e.files, e.salience, e.created_at, e.updated_at,
+        `SELECT e.id, e.scope_id, e.source_id, e.summary, e.files, e.salience, e.language, e.created_at, e.updated_at,
                 bm25(episodes_fts) as rank
          FROM episodes_fts JOIN episodes e ON e.rowid = episodes_fts.rowid
          WHERE episodes_fts MATCH ? AND e.scope_id = ?
@@ -417,7 +432,7 @@ export class Store {
 
     const artifacts = this.db
       .prepare(
-        `SELECT a.id, a.scope_id, a.source_id, a.ref, a.note, a.created_at, a.updated_at,
+        `SELECT a.id, a.scope_id, a.source_id, a.ref, a.note, a.language, a.created_at, a.updated_at,
                 bm25(artifacts_fts) as rank
          FROM artifacts_fts JOIN artifacts a ON a.rowid = artifacts_fts.rowid
          WHERE artifacts_fts MATCH ? AND a.scope_id = ?
@@ -471,28 +486,28 @@ export class Store {
     const out: MemoryRow[] = [];
 
     const facts = this.db.prepare(
-      `SELECT id, scope_id, source_id, content, superseded_by, last_verified_at, created_at, updated_at
+      `SELECT id, scope_id, source_id, content, superseded_by, language, last_verified_at, created_at, updated_at
        FROM facts WHERE scope_id = ? AND (created_at >= ? OR updated_at >= ?) AND superseded_by IS NULL
        ORDER BY updated_at DESC`
     ).all(scopeId, since, since) as Record<string, unknown>[];
     for (const r of facts) out.push(rowToMemory("fact", r));
 
     const decisions = this.db.prepare(
-      `SELECT id, scope_id, source_id, content, rationale, superseded_by, last_verified_at, created_at, updated_at
+      `SELECT id, scope_id, source_id, content, rationale, superseded_by, language, last_verified_at, created_at, updated_at
        FROM decisions WHERE scope_id = ? AND (created_at >= ? OR updated_at >= ?) AND superseded_by IS NULL
        ORDER BY updated_at DESC`
     ).all(scopeId, since, since) as Record<string, unknown>[];
     for (const r of decisions) out.push(rowToMemory("decision", r));
 
     const episodes = this.db.prepare(
-      `SELECT id, scope_id, source_id, summary, files, salience, created_at, updated_at
+      `SELECT id, scope_id, source_id, summary, files, salience, language, created_at, updated_at
        FROM episodes WHERE scope_id = ? AND (created_at >= ? OR updated_at >= ?)
        ORDER BY updated_at DESC`
     ).all(scopeId, since, since) as Record<string, unknown>[];
     for (const r of episodes) out.push(rowToMemory("episode", r));
 
     const artifacts = this.db.prepare(
-      `SELECT id, scope_id, source_id, ref, note, created_at, updated_at
+      `SELECT id, scope_id, source_id, ref, note, language, created_at, updated_at
        FROM artifacts WHERE scope_id = ? AND (created_at >= ? OR updated_at >= ?)
        ORDER BY updated_at DESC`
     ).all(scopeId, since, since) as Record<string, unknown>[];
@@ -507,14 +522,14 @@ export class Store {
     const out: MemoryRow[] = [];
 
     const decisions = this.db.prepare(
-      `SELECT id, scope_id, source_id, content, rationale, superseded_by, last_verified_at, created_at, updated_at
+      `SELECT id, scope_id, source_id, content, rationale, superseded_by, language, last_verified_at, created_at, updated_at
        FROM decisions WHERE scope_id = ? AND superseded_by IS NULL
        ORDER BY created_at ASC LIMIT ?`
     ).all(scopeId, limit) as Record<string, unknown>[];
     for (const r of decisions) out.push(rowToMemory("decision", r));
 
     const episodes = this.db.prepare(
-      `SELECT id, scope_id, source_id, summary, files, salience, created_at, updated_at
+      `SELECT id, scope_id, source_id, summary, files, salience, language, created_at, updated_at
        FROM episodes WHERE scope_id = ?
        ORDER BY created_at ASC LIMIT ?`
     ).all(scopeId, limit) as Record<string, unknown>[];
@@ -602,6 +617,7 @@ export class Store {
             "source_id",
             "content",
             "superseded_by",
+            "language",
             "created_at",
             "updated_at",
             "last_verified_at",
@@ -619,6 +635,7 @@ export class Store {
             "content",
             "rationale",
             "superseded_by",
+            "language",
             "created_at",
             "updated_at",
             "last_verified_at",
@@ -636,6 +653,7 @@ export class Store {
             "summary",
             "files",
             "salience",
+            "language",
             "created_at",
             "updated_at",
           ],
@@ -651,6 +669,7 @@ export class Store {
             "source_id",
             "ref",
             "note",
+            "language",
             "created_at",
             "updated_at",
           ],
@@ -748,19 +767,29 @@ function anonymize(p: ExportPayload): void {
 const HALFLIFE_30D = 30 * 24 * 60 * 60 * 1000;
 const HALFLIFE_120D = 120 * 24 * 60 * 60 * 1000;
 
-function rowScore(r: MemoryRow, now: number): number {
+function rowScore(r: MemoryRow, now: number, activeLanguages?: string[]): number {
   const ageMs = Math.max(0, now - r.updatedAt);
+  let base = 1.0;
   switch (r.type) {
     case "episode":
-      return effectiveSalience(r.salience ?? 1, r.updatedAt, now);
+      base = effectiveSalience(r.salience ?? 1, r.updatedAt, now);
+      break;
     case "decision":
       // Decisions don't decay — they remain relevant until explicitly superseded.
-      return 1.0;
+      base = 1.0;
+      break;
     case "fact":
     case "artifact":
       // Slow decay: 120-day halflife keeps stable knowledge around.
-      return 1 / (1 + ageMs / HALFLIFE_120D);
+      base = 1 / (1 + ageMs / HALFLIFE_120D);
+      break;
   }
+  // Apply language boost: if the memory's language matches one of the active languages,
+  // give it a +0.5 boost!
+  if (r.language && activeLanguages && activeLanguages.map(l => l.toLowerCase()).includes(r.language.toLowerCase())) {
+    return base + 0.5;
+  }
+  return base;
 }
 
 function rowToMemory(type: MemoryType, r: Record<string, unknown>): MemoryRow {
@@ -772,6 +801,7 @@ function rowToMemory(type: MemoryType, r: Record<string, unknown>): MemoryRow {
     createdAt: r["created_at"] as number,
     updatedAt: r["updated_at"] as number,
     supersededBy: (r["superseded_by"] as string | null) ?? undefined,
+    language: (r["language"] as string | null) ?? undefined,
   };
   switch (type) {
     case "fact":

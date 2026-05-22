@@ -9,6 +9,7 @@ export function estimateTokens(s: string): number {
 export interface CompressOptions {
   budgetTokens: number;
   query: string;
+  activeLanguages?: string[];
 }
 
 // Type weights bias relevance scoring rather than hard-overriding it.
@@ -22,30 +23,36 @@ const TYPE_WEIGHT: Record<MemoryRow["type"], number> = {
 };
 
 /**
- * Rerank rows by (type priority, recency) and emit a token-budgeted markdown
+ * Rerank rows by (type priority, recency, language boost) and emit a token-budgeted markdown
  * gist. Output structure:
  *
  *   ## Facts
- *   - <content>  _(provenance)_
+ *   - [typescript] <content>  _(provenance)_
  *
  *   ## Decisions
- *   - <content> — _because_ <rationale>
+ *   - [go] <content> — _because_ <rationale>
  *
  *   ## Recent episodes
  *   - <summary> [files: ...]
  *
  *   ## Artifacts
- *   - <ref> — <note>
+ *   - \`<ref>\` — <note>
  *
  *   _Sources: N items from M sessions_
  */
 export function compressToGist(rows: MemoryRow[], opts: CompressOptions): string {
   // Caller passes rows already ordered by relevance (BM25). Convert to a
-  // descending-relevance score, multiply by type weight, then sort.
-  const scored = rows.map((r, i) => ({
-    row: r,
-    score: (1 / (i + 1)) * TYPE_WEIGHT[r.type],
-  }));
+  // descending-relevance score, multiply by type weight and language boost, then sort.
+  const scored = rows.map((r, i) => {
+    let typeWeight = TYPE_WEIGHT[r.type];
+    if (r.language && opts.activeLanguages && opts.activeLanguages.map(l => l.toLowerCase()).includes(r.language.toLowerCase())) {
+      typeWeight *= 1.5; // Apply a 1.5x boost to matching language
+    }
+    return {
+      row: r,
+      score: (1 / (i + 1)) * typeWeight,
+    };
+  });
   const ranked = scored
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
@@ -93,19 +100,20 @@ export function compressToGist(rows: MemoryRow[], opts: CompressOptions): string
 
 function formatLine(r: MemoryRow): string {
   const stale = staleWarning(r);
+  const langBadge = r.language ? `[${r.language.toLowerCase()}] ` : "";
   switch (r.type) {
     case "fact":
-      return stale ? `- ${r.content} _(${stale})_` : `- ${r.content}`;
+      return stale ? `- ${langBadge}${r.content} _(${stale})_` : `- ${langBadge}${r.content}`;
     case "decision":
       return r.rationale
-        ? `- ${r.content} — _because_ ${r.rationale}${stale ? ` _(${stale})_` : ""}`
-        : `- ${r.content}${stale ? ` _(${stale})_` : ""}`;
+        ? `- ${langBadge}${r.content} — _because_ ${r.rationale}${stale ? ` _(${stale})_` : ""}`
+        : `- ${langBadge}${r.content}${stale ? ` _(${stale})_` : ""}`;
     case "episode": {
       const files = r.files && r.files.length ? ` [${r.files.slice(0, 3).join(", ")}]` : "";
-      return `- ${r.content}${files}`;
+      return `- ${langBadge}${r.content}${files}`;
     }
     case "artifact":
-      return r.note ? `- \`${r.ref}\` — ${r.note}` : `- \`${r.ref}\``;
+      return r.note ? `- ${langBadge}\`${r.ref}\` — ${r.note}` : `- ${langBadge}\`${r.ref}\``;
   }
 }
 

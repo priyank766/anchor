@@ -5,6 +5,7 @@ import { RememberInput } from "./schemas.js";
 import { hostname } from "node:os";
 import { resolveDefaultScope } from "../scope.js";
 import { loadEmbedProvider } from "../providers/types.js";
+import { detectLanguage } from "../capture/language.js";
 
 // Compose redaction (secrets) with injection scrubbing (untrusted-content
 // neutralization). Both run before any content reaches disk.
@@ -33,10 +34,17 @@ export async function handleRemember(store: Store, raw: unknown) {
     deviceId: hostname(),
   });
 
+  const language = input.language || (detectLanguage({
+    content: safeContent,
+    rationale: safeRationale,
+    ref: safeRef,
+    files: input.files,
+  }) ?? undefined);
+
   let id: string;
   switch (input.type) {
     case "fact":
-      id = store.insertFact({ scopeId: scope.id, sourceId, content: safeContent });
+      id = store.insertFact({ scopeId: scope.id, sourceId, content: safeContent, language });
       break;
     case "decision":
       id = store.insertDecision({
@@ -44,6 +52,7 @@ export async function handleRemember(store: Store, raw: unknown) {
         sourceId,
         content: safeContent,
         rationale: safeRationale,
+        language,
       });
       break;
     case "episode":
@@ -52,6 +61,7 @@ export async function handleRemember(store: Store, raw: unknown) {
         sourceId,
         summary: safeContent,
         files: input.files,
+        language,
       });
       break;
     case "artifact":
@@ -61,6 +71,7 @@ export async function handleRemember(store: Store, raw: unknown) {
         sourceId,
         ref: safeRef,
         note: safeNote,
+        language,
       });
       break;
   }

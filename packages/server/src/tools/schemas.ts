@@ -13,6 +13,7 @@ export const RememberInput = z
     scope: z.string().optional(),
     agent: z.string().default("unknown"),
     sessionId: z.string().optional(),
+    language: z.string().optional(),
   })
   .refine(
     (v) => (v.type === "artifact" ? !!v.ref : !!v.content),
@@ -26,6 +27,8 @@ export const RecallInput = z.object({
   query: z.string().min(1).max(2000),
   scope: z.string().optional(),
   budgetTokens: z.number().int().positive().max(20000).optional(),
+  language: z.string().optional(),
+  activeFiles: z.array(z.string()).max(50).optional(),
 });
 
 export const ForgetInput = z.object({

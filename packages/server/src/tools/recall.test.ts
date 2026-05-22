@@ -160,4 +160,31 @@ describe("handleRecall", () => {
     expect(result.gist).toContain("## Facts");
     expect(result.gist).toContain("Sources:");
   });
+
+  it("boosts matching language memories dynamically during recall", async () => {
+    // Seed TypeScript and Go facts
+    await seedScope(store, "boost-test", [
+      { type: "fact", content: "Typescript server startup entry point config", language: "typescript" },
+      { type: "fact", content: "Go server startup entry point config", language: "go" },
+    ]);
+
+    // 1. Query with typescript keyword or explicit parameter
+    const tsResult = await handleRecall(store, {
+      query: "server startup",
+      language: "typescript",
+      scope: "boost-test",
+    });
+
+    // The typescript fact should be first and contain its badge
+    expect(tsResult.gist).toContain("[typescript]");
+    
+    // Let's do another with go
+    const goResult = await handleRecall(store, {
+      query: "server startup",
+      activeFiles: ["src/main.go"],
+      scope: "boost-test",
+    });
+
+    expect(goResult.gist).toContain("[go]");
+  });
 });

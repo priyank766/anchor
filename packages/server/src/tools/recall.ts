@@ -5,6 +5,7 @@ import { RecallInput } from "./schemas.js";
 import { loadConfig } from "../config.js";
 import { resolveDefaultScope } from "../scope.js";
 import { loadEmbedProvider } from "../providers/types.js";
+import { detectLanguage } from "../capture/language.js";
 
 export async function handleRecall(store: Store, raw: unknown) {
   const input = RecallInput.parse(raw);
@@ -43,9 +44,35 @@ export async function handleRecall(store: Store, raw: unknown) {
     }
   }
 
+  const activeLanguages: string[] = [];
+  if (input.language) {
+    activeLanguages.push(input.language.toLowerCase());
+  }
+  if (input.activeFiles && input.activeFiles.length > 0) {
+    for (const file of input.activeFiles) {
+      const lang = detectLanguage({ content: "", files: [file] });
+      if (lang) {
+        activeLanguages.push(lang.toLowerCase());
+      }
+    }
+  }
+  const queryLower = input.query.toLowerCase();
+  const knownLanguages = [
+    "typescript", "javascript", "go", "python", "rust", "java", "cpp", "c",
+    "ruby", "php", "csharp", "swift", "kotlin", "shell", "yaml", "json",
+    "markdown", "html", "css", "sql", "docker"
+  ];
+  for (const lang of knownLanguages) {
+    if (queryLower.includes(lang)) {
+      activeLanguages.push(lang);
+    }
+  }
+  const uniqueActiveLanguages = [...new Set(activeLanguages)];
+
   const gist = compressToGist(merged, {
     budgetTokens: input.budgetTokens ?? cfg.defaultBudgetTokens,
     query: input.query,
+    activeLanguages: uniqueActiveLanguages.length > 0 ? uniqueActiveLanguages : undefined,
   });
 
   // Side-effect: recall is a signal that these memories are actively useful.

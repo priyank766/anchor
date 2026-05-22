@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS facts (
   source_id     TEXT NOT NULL REFERENCES sources(id),
   content       TEXT NOT NULL,
   superseded_by TEXT REFERENCES facts(id),
+  language      TEXT,
   created_at    INTEGER NOT NULL,
   updated_at    INTEGER NOT NULL,
   last_verified_at INTEGER
@@ -44,6 +45,7 @@ CREATE TABLE IF NOT EXISTS decisions (
   content       TEXT NOT NULL,
   rationale     TEXT,
   superseded_by TEXT REFERENCES decisions(id),
+  language      TEXT,
   created_at    INTEGER NOT NULL,
   updated_at    INTEGER NOT NULL,
   last_verified_at INTEGER
@@ -56,6 +58,7 @@ CREATE TABLE IF NOT EXISTS episodes (
   summary     TEXT NOT NULL,
   files       TEXT,
   salience    REAL NOT NULL DEFAULT 1.0,
+  language    TEXT,
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL
 );
@@ -66,6 +69,7 @@ CREATE TABLE IF NOT EXISTS artifacts (
   source_id   TEXT NOT NULL REFERENCES sources(id),
   ref         TEXT NOT NULL,
   note        TEXT,
+  language    TEXT,
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL
 );
