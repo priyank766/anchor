@@ -1669,6 +1669,11 @@ Time to first useful action: <span style="background: #5BC25A; color: #15110A; p
                   entry and writes the new one in its place. Old episodes age out on their own through a salience decay
                   function; nobody has to garbage-collect anything by hand. And before any of this hits disk, secrets
                   are scrubbed at the write boundary, not as a courtesy on the way back out.</p>
+                <p style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1rem;">
+                  <strong>Per-Language Prioritization</strong> shields your agent from context noise in multi-language repos and monorepos. 
+                  Anchor automatically tags memories with their programming language (e.g. <code>typescript</code>, <code>go</code>, <code>rust</code>, <code>python</code>) by analyzing code blocks or active file paths. 
+                  When your agent recalls memory, matching languages receive a <strong>1.5x relevance boost</strong>, bringing in-scope lessons directly to the top of the context budget while letting general preference rules still gracefully pass through.
+                </p>
               </div>
             </div>
           </div>
@@ -1913,7 +1918,7 @@ Time to first useful action: <span style="background: #5BC25A; color: #15110A; p
               <div class="step">
                 <div class="step-head">
                   <div class="step-num">01</div>
-                  <div class="step-title">Install &amp; <em>init</em></div>
+                  <div class="step-title">Install &amp; <em>init</em> (auto-registers)</div>
                 </div>
                 <div class="terminal">
                   <div class="terminal-head">
@@ -1928,7 +1933,7 @@ Time to first useful action: <span style="background: #5BC25A; color: #15110A; p
               <div class="step">
                 <div class="step-head">
                   <div class="step-num">02</div>
-                  <div class="step-title">Register with your <em>agent</em></div>
+                  <div class="step-title">Share with your <em>team</em></div>
                 </div>
                 <div class="terminal">
                   <div class="terminal-head">
@@ -1936,8 +1941,7 @@ Time to first useful action: <span style="background: #5BC25A; color: #15110A; p
                     <span class="term-title">~ — zsh</span>
                     <button class="term-badge" data-copy="cmd-2">⎘ COPY</button>
                   </div>
-                  <pre class="terminal-body"
-                    id="cmd-2"><span class="prompt">$</span> claude mcp add anchor -- anchor-server</pre>
+                  <pre class="terminal-body" id="cmd-2"><span class="prompt">$</span> npx @anchormem/anchor setup</pre>
                 </div>
               </div>
 
@@ -1952,7 +1956,7 @@ Time to first useful action: <span style="background: #5BC25A; color: #15110A; p
                     <span class="term-title">~ — zsh</span>
                     <button class="term-badge" data-copy="cmd-3">⎘ COPY</button>
                   </div>
-                  <pre class="terminal-body" id="cmd-3"><span class="prompt">$</span> anchor</pre>
+                  <pre class="terminal-body" id="cmd-3"><span class="prompt">$</span> npx @anchormem/anchor</pre>
                 </div>
               </div>
 

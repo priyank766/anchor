@@ -89,54 +89,41 @@ flowchart TB
 
 Set up Anchor and connect it to your favorite AI coding agents in under a minute.
 
-### 1. Install and Initialize
+### 1. Install, Initialize & Auto-Register
 
-Run the following command to install the CLI and initialize your local environment (this creates the database directory at `~/.anchor/`):
+Run the following command to install the CLI, initialize your local environment, and **automatically register the MCP server inside all detected local AI coding tools** (Claude Code, Cursor, Codex, Windsurf, Cline, and Antigravity):
 
 ```bash
 npx @anchormem/anchor init
 ```
 
-### 2. Configure Your Agent
+That's it! Running `init` scans your machine, locates configuration folders for your installed agents, and injects the Anchor MCP server entry directly. No manual config editing is required.
 
-Anchor acts as an MCP server. Add the connection logic to your preferred agent's configuration:
+### 2. Share with your Team (Optional but Recommended)
 
-#### Claude Code
-
-Run the standard MCP command:
+To make context sharing seamless for your team, run the `setup` command inside your project's repository root:
 
 ```bash
-claude mcp add anchor -- anchor-server
+npx @anchormem/anchor setup
 ```
 
-#### Cursor
+This generates project-scoped configuration files (like `.mcp.json` for Claude Code, `.cursor/mcp.json` for Cursor, and `.agents/mcp_config.json` for Antigravity). Teammates who clone the repository will have their AI tools auto-detect and load Anchor without any manual setup!
 
-Add the following block to your Cursor configuration file at `.cursor/mcp.json`:
+### 3. Verification & Manual Fallbacks
 
-```json
-{
-  "mcpServers": {
-    "anchor": { "command": "anchor-server" }
-  }
-}
+Run the built-in diagnostic suite to confirm everything is configured perfectly:
+
+```bash
+npx @anchormem/anchor doctor
 ```
 
-#### Codex CLI
-
-Add the following to your Codex configuration file at `~/.codex/config.toml`:
-
-```toml
-[mcp.anchor]
-command = "anchor-server"
-```
-
-#### Other Agents (Cline, Continue.dev, Windsurf, OpenCode, Zed, and Antigravity)
-
-Each of these environments accepts standard MCP server configurations. Simply supply `anchor-server` as the command, and the host agent will communicate with Anchor over standard standard I/O (stdio).
+Should you ever need to perform manual registration, Anchor supports standard MCP configurations. Simply map the server key `anchor` to the command `anchor-server` (or `npx -y @anchormem/anchor@latest anchor-server`) in your tool's settings.
 
 ---
 
 ## How It Works
+
+### Four-Tier Memory Structure
 
 Anchor stores project context in four distinct, typed structures, preventing unstructured context drift.
 
@@ -148,6 +135,13 @@ Anchor stores project context in four distinct, typed structures, preventing uns
 | **Artifact** | A specific file pointer, symbol, or reference URL. | `src/auth/middleware.ts:42` |
 
 When a fact or decision is updated, the agent uses `memory_supersede` to retire the older record rather than leaving conflicting entries. Older task episodes decay in salience over time, keeping your active context clean.
+
+### Per-Language Prioritization & Boosting
+
+In multi-language repositories (monorepos or polyglot codebases), memories are automatically scoped by language:
+1. **Auto-Tagging on Capture**: When an agent saves a fact, decision, or episode, Anchor automatically infers the target programming language (e.g., `typescript`, `go`, `rust`, `python`) by analyzing file paths, extensions, markdown code blocks, or syntax patterns.
+2. **Context-Aware Boosting**: When an agent requests context, Anchor detects the active programming language from the agent's current files. Memories matching that language receive a **1.5x rank weight boost** and a **+0.5 base score**.
+3. **No Hidden Context**: Cross-language/general memories (like pnpm commands or architectural designs) still surface, but out-of-scope specific languages are gently deprioritized to preserve the limited context token budget.
 
 ---
 
@@ -180,6 +174,7 @@ The following evaluations are fully reproducible using the local harness (`node 
 ## Core Product Features
 
 - **Scope-Isolated Contexts:** Anchor automatically detects directory boundaries based on your working directory, keeping memories isolated to the relevant project.
+- **Per-Language Prioritization:** In monorepos or multi-language projects, Anchor automatically tags memories with their active programming language and applies a 1.5x soft-boosting relevance adjustment when working inside those languages, ensuring relevant context fits inside the token budget first.
 - **Durable Four-Tier Memory:** Organizes information into distinct, structured types (Facts, Decisions, Task Episodes, and Artifacts) for structured and precise recall.
 - **Local SQLite Engine:** Uses local SQLite FTS5 (BM25) for ultra-fast, zero-dependency, and deterministic retrieval.
 - **Embedded Security & Redaction:** Automatically scrubs credentials (such as Stripe, Slack, AWS, and OpenAI keys) and prompt-injection keywords at write-time, before they ever hit the disk.
