@@ -1,6 +1,6 @@
 {
   "name": "@anchormem/server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Anchor MCP server — local-first cross-agent memory for AI coding agents.",
   "keywords": [
     "mcp",
