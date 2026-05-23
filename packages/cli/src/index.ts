@@ -125,6 +125,10 @@ async function main() {
       process.stdout.write(cfg.dbPath + "\n");
       return;
 
+    case "anchor-server":
+      await import("@anchormem/server");
+      return;
+
     case "list": {
       const store = new Store(cfg);
       const scopeArg = argFlag(rest, "--scope");
