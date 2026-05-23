@@ -1,0 +1,5 @@
+# Ignore local SQLite database and journal files
+memory.db
+memory.db-journal
+memory.db-wal
+memory.db-shm

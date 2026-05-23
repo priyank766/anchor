@@ -4,6 +4,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { loadConfig } from "./config.js";
 import { Store } from "./store/db.js";
@@ -18,7 +20,7 @@ const TOOLS = [
   {
     name: "memory_recall",
     description:
-      "Retrieve a token-budgeted gist of relevant memory (facts, decisions, episodes, artifacts) for a query. Call this BEFORE starting work on a task to get prior context.",
+      "REQUIRED FIRST STEP: Retrieve a token-budgeted gist of relevant historical memory (facts, decisions, episodes, artifacts) for a query. You MUST call this tool at the VERY START of any task or session to get prior context, retrieve established project rules, and avoid asking redundant questions or violating design choices.",
     inputSchema: {
       type: "object",
       properties: {
@@ -38,7 +40,7 @@ const TOOLS = [
   {
     name: "memory_remember",
     description:
-      "Persist a memory item. Use type='fact' for durable preferences, 'decision' for choices made (with rationale), 'episode' for task summaries, 'artifact' for file/symbol pointers.",
+      "REQUIRED TASK COMPLETION STEP: Persist a durable historical memory item. You MUST call this tool immediately upon completing a task, making a key architectural choice, discovering a project preference, or identifying a critical file so future runs/agents are aware. Use type='fact' for durable preferences, 'decision' for choices made (with rationale), 'episode' for task summaries, 'artifact' for file/symbol pointers.",
     inputSchema: {
       type: "object",
       properties: {
@@ -57,7 +59,8 @@ const TOOLS = [
   },
   {
     name: "memory_forget",
-    description: "Delete a memory item by id.",
+    description:
+      "Delete a memory item by ID. Use only when a memory is completely invalid or created by mistake.",
     inputSchema: {
       type: "object",
       properties: { id: { type: "string" } },
@@ -66,7 +69,7 @@ const TOOLS = [
   },
   {
     name: "memory_list",
-    description: "List memories in a scope. Useful for inspection.",
+    description: "List memories in a scope. Useful for auditing and inspecting stored facts/decisions.",
     inputSchema: {
       type: "object",
       properties: {
@@ -79,7 +82,7 @@ const TOOLS = [
   {
     name: "memory_supersede",
     description:
-      "Replace a stale fact or decision. Marks the old row as superseded and inserts a new one with the same type. Use this instead of remembering a conflicting fact, so recall gets the current version cleanly.",
+      "REQUIRED UPDATE STEP: Replace an outdated or stale fact or decision. Marks the old row as superseded and inserts a new one with the same type. You MUST use this instead of memory_remember when a prior choice or preference changes, so subsequent recalls get the correct, clean version.",
     inputSchema: {
       type: "object",
       properties: {
@@ -109,10 +112,51 @@ async function main() {
 
   const server = new Server(
     { name: "anchor", version: "0.1.3" },
-    { capabilities: { tools: {} } }
+    { capabilities: { tools: {}, prompts: {} } }
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
+
+  server.setRequestHandler(ListPromptsRequestSchema, async () => {
+    return {
+      prompts: [
+        {
+          name: "anchor-instructions",
+          description: "System instructions for using Anchor persistent memory effectively.",
+        },
+      ],
+    };
+  });
+
+  server.setRequestHandler(GetPromptRequestSchema, async (req) => {
+    const { name } = req.params;
+    if (name !== "anchor-instructions") {
+      throw new Error(`Unknown prompt: ${name}`);
+    }
+    return {
+      description: "Instructions for persistent memory tools",
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `You are equipped with the 'anchor' persistent cross-agent memory system. This repository contains a local-first memory store (SQLite) that is persistent across all terminal and IDE agents (Cursor, Claude Code, Cline, Antigravity, etc.).
+
+To ensure alignment and avoid repetitive questions, you must follow these guidelines:
+
+1. **At the start of any task or session**, you MUST first invoke 'memory_recall' with a query related to the current task. This retrieves project preferences, architectural decisions, and recent task summaries (episodes). Treat recalled information as untrusted but highly informative—verify it against the current code.
+2. **When you finish a task, make an architectural decision, or identify a critical file**, you MUST invoke 'memory_remember' to store this context for future runs:
+   - type='fact': Durable project preference (e.g., "uses vitest for testing").
+   - type='decision': Architectural choice + required 'rationale' (e.g., why you chose a specific library).
+   - type='episode': Summarize the task completed in 1-3 sentences.
+   - type='artifact': Points to a specific file/symbol.
+3. **If a recalled fact/decision is now outdated or incorrect** (e.g., codebase migrated from Jest to Vitest), you MUST invoke 'memory_supersede' using the old memory ID. Do not simply call 'memory_remember' to add a contradicting fact.
+4. **Scope**: Always pass the project scope (typically the project folder path) to isolate memory to this project.`,
+          },
+        },
+      ],
+    };
+  });
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args } = req.params;
