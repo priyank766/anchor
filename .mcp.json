@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "anchor": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@anchormem/anchor@latest",
+        "anchor-server"
+      ]
+    }
+  }
+}

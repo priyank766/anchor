@@ -13,12 +13,31 @@ export interface SetupResult {
   projectRoot: string;
 }
 
-export function runSetup(opts: { projectRoot: string }): SetupResult {
-  const { projectRoot } = opts;
+export function runSetup(opts: {
+  projectRoot: string;
+  all?: boolean;
+  cursor?: boolean;
+  codex?: boolean;
+}): SetupResult {
+  const { projectRoot, all = false, cursor = false, codex = false } = opts;
   const outcomes: SetupResult["outcomes"] = [];
 
   // Only generate project-level configs for tools that support it.
-  const projectTools = TOOLS.filter((t) => t.projectConfigPath() !== null);
+  // By default, only generate for CLI tools (antigravity, claude-code) that are detected.
+  // IDEs (like Cursor) or other tools can be explicitly requested or generated with --all.
+  const projectTools = TOOLS.filter((t) => {
+    if (t.projectConfigPath() === null) return false;
+
+    // If --all is passed, generate for all supported tools
+    if (all) return true;
+
+    // By default, only generate for detected terminal CLI tools
+    const isDefaultCli = t.id === "antigravity" || t.id === "claude-code";
+    const isExplicitlyRequested =
+      (t.id === "cursor" && cursor) || (t.id === "codex" && codex);
+
+    return t.detect() && (isDefaultCli || isExplicitlyRequested);
+  });
 
   for (const tool of projectTools) {
     const relPath = tool.projectConfigPath()!;

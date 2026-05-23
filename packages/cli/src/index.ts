@@ -16,7 +16,9 @@ ${c.bold("Usage")}
   ${c.cyan("anchor")}                       Open the interactive memory console
   ${c.cyan("anchor browse")} [--scope X]    Same as above
   ${c.cyan("anchor init")}                  Initialize Anchor + auto-register in all detected tools
-  ${c.cyan("anchor setup")}                 Generate project-level MCP configs for team sharing
+  ${c.cyan("anchor setup")} [--cursor] [--all]
+                                Generate project-level MCP configs for terminal coding CLIs
+                                (--cursor to add Cursor, --all for all tools)
   ${c.cyan("anchor status")}                Show config and DB stats
   ${c.cyan("anchor list")} [--scope X]      List memories in a scope
   ${c.cyan("anchor export")} [--scope X] [--anonymize]
@@ -180,6 +182,9 @@ async function main() {
     case "setup": {
       const { runSetup, printSetupResults } = await import("./setup.js");
       const projectRoot = findGitRoot(process.cwd()) ?? process.cwd();
+      const allFlag = rest.includes("--all");
+      const cursorFlag = rest.includes("--cursor");
+      const codexFlag = rest.includes("--codex");
 
       // Also ensure ~/.anchor/ exists (run init if needed)
       if (!existsSync(cfg.dataDir)) {
@@ -188,7 +193,12 @@ async function main() {
         process.stdout.write(ok(`Initialized at ${c.cyan(cfg.dataDir)}\n\n`));
       }
 
-      const result = runSetup({ projectRoot });
+      const result = runSetup({
+        projectRoot,
+        all: allFlag,
+        cursor: cursorFlag,
+        codex: codexFlag,
+      });
       printSetupResults(result);
       return;
     }
