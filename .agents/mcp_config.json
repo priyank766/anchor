@@ -1,11 +1,9 @@
 {
   "mcpServers": {
     "anchor": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "@anchormem/anchor@latest",
-        "anchor-server"
+        "./packages/server/dist/index.js"
       ]
     }
   }
