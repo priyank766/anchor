@@ -19,6 +19,7 @@ Thumbs.db
 
 # Eval results (auto-generated, changes every run)
 tests/eval/results/
+tests/agent/logs/
 
 # Internal docs / plans / strategy — keep private
 docs/

@@ -2,7 +2,7 @@
 // Running `anchor setup` in a git repo creates config files that,
 // when committed, let teammates' tools auto-detect Anchor.
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { TOOLS, ANCHOR_MCP_ENTRY, ANCHOR_SERVER_KEY } from "./tools-registry.js";
 import { writeMcpEntry, type WriteOutcome } from "./config-writer.js";
@@ -51,6 +51,10 @@ export function runSetup(opts: {
     );
     outcomes.push({ ...outcome, toolName: tool.name });
   }
+
+  // Generate or update project-level agent custom instruction files
+  const instructionOutcomes = writeAgentInstructions(projectRoot);
+  outcomes.push(...instructionOutcomes);
 
   return { outcomes, projectRoot };
 }
@@ -107,3 +111,67 @@ export function printSetupResults(result: SetupResult): void {
   }
   process.stdout.write("\n");
 }
+
+/**
+ * Generate or update project-level agent custom instructions files.
+ * Tells agents (GitHub Copilot, Cursor, Cline) to automatically use the memory recall/remember tools.
+ */
+export function writeAgentInstructions(projectRoot: string): Array<WriteOutcome & { toolName: string }> {
+  const outcomes: Array<WriteOutcome & { toolName: string }> = [];
+
+  const anchorInstructions = `
+# Anchor Memory Sharing
+- **REQUIRED FIRST STEP**: Always call the \`memory_recall\` tool from the \`anchor\` MCP server at the start of any session or query. Use it to retrieve project preferences, architectural decisions, recent task summaries (episodes), and settings (such as API ports). Do not assume context is defined in local files.
+- **REQUIRED COMPLETION STEP**: When you finish a task, establish a new preference, or make an architectural choice, invoke \`memory_remember\` (or \`memory_supersede\` for updates) to persist it for future runs and other agents.
+`;
+
+  const targets = [
+    {
+      filePath: join(projectRoot, ".github", "copilot-instructions.md"),
+      toolName: "GitHub Copilot Instructions",
+      needsFolder: true,
+    },
+    {
+      filePath: join(projectRoot, ".cursorrules"),
+      toolName: "Cursor Rules",
+      needsFolder: false,
+    },
+    {
+      filePath: join(projectRoot, ".clinerules"),
+      toolName: "Cline Rules",
+      needsFolder: false,
+    },
+  ];
+
+  for (const target of targets) {
+    try {
+      if (target.needsFolder) {
+        mkdirSync(join(projectRoot, ".github"), { recursive: true });
+      }
+
+      if (!existsSync(target.filePath)) {
+        writeFileSync(target.filePath, `# Custom Instructions\n${anchorInstructions}`, "utf8");
+        outcomes.push({ filePath: target.filePath, status: "created", toolName: target.toolName });
+      } else {
+        const content = readFileSync(target.filePath, "utf8");
+        if (content.includes("memory_recall") || content.includes("Anchor Memory")) {
+          outcomes.push({ filePath: target.filePath, status: "skipped", toolName: target.toolName });
+        } else {
+          const separator = content.endsWith("\n") ? "" : "\n";
+          writeFileSync(target.filePath, content + separator + anchorInstructions, "utf8");
+          outcomes.push({ filePath: target.filePath, status: "merged", toolName: target.toolName });
+        }
+      }
+    } catch (e) {
+      outcomes.push({
+        filePath: target.filePath,
+        status: "error",
+        toolName: target.toolName,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  return outcomes;
+}
+
