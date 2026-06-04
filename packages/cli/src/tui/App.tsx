@@ -5,6 +5,9 @@ import type { Store, MemoryRow, MemoryType } from "@anchormem/server/store/db";
 import { handleSupersede } from "@anchormem/server/tools/supersede";
 import { handleRemember as handleRememberShared } from "@anchormem/server/tools/remember";
 import { BIG_BANNER_LINES } from "../ui.js";
+import { TOOLS, ANCHOR_SERVER_KEY, ANCHOR_MCP_ENTRY } from "../tools-registry.js";
+import { writeMcpEntry } from "../config-writer.js";
+
 
 interface Props {
   store: Store;
@@ -92,6 +95,7 @@ export function App({ store, initialScope }: Props) {
             "  /forget <id>                 delete by id",
             "  /list [type]                 list memories in this scope",
             "  /scope <name>                switch scope",
+            "  /update                      register/update MCP config in all detected tools",
             "  /clear                       clear screen history",
             "  /help                        this",
             "  /quit                        exit",
@@ -157,6 +161,9 @@ export function App({ store, initialScope }: Props) {
       case "list":
         handleList(arg as MemoryType | "");
         return;
+      case "update":
+        handleUpdateMcp();
+        return;
       default:
         push("error", `unknown command: /${cmd}  (try /help)`);
     }
@@ -212,6 +219,43 @@ export function App({ store, initialScope }: Props) {
       return;
     }
     push("result", formatRows(rows));
+  }
+
+  function handleUpdateMcp() {
+    push("info", "Updating MCP server configuration in detected tools...");
+    let registered = 0;
+    const details: string[] = [];
+    for (const tool of TOOLS) {
+      const detected = tool.detect();
+      if (!detected) {
+        details.push(`- ${tool.name}: not detected`);
+        continue;
+      }
+      const configPath = tool.globalConfigPath();
+      if (!configPath) {
+        details.push(`- ${tool.name}: no global config path`);
+        continue;
+      }
+      try {
+        const result = writeMcpEntry(configPath, ANCHOR_SERVER_KEY, ANCHOR_MCP_ENTRY, tool.format);
+        if (result.status === "created" || result.status === "merged") {
+          registered++;
+          details.push(`- ${tool.name}: registered successfully`);
+        } else if (result.status === "skipped") {
+          details.push(`- ${tool.name}: already configured`);
+        } else {
+          details.push(`- ${tool.name}: configuration failed (${result.error ?? "unknown"})`);
+        }
+      } catch (err) {
+        details.push(`- ${tool.name}: error writing config: ${(err as Error).message}`);
+      }
+    }
+    push("info", details.join("\n"));
+    if (registered > 0) {
+      push("info", `Success: Updated/registered Anchor in ${registered} tool(s).`);
+    } else {
+      push("info", "No new registrations needed (already configured or no matching tools detected).");
+    }
   }
 
   return (

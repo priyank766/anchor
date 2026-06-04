@@ -32,6 +32,14 @@ Read in this order when starting a new session:
 - **Code style**: terse, no unnecessary comments, no premature abstractions. The repo's own root rules apply (CLAUDE.md instructions in user's home dir take precedence — check those first).
 - **Branding**: Product = **Anchor**. CLI = `anchor`. Server bin = `anchor-server`. npm scope = `@anchormem`. Skill registry handle = `anchormem/anchor` (or user's GitHub username if going personal). Data dir = `~/.anchor/`. The folder on disk is still named `OpenMEM/` for legacy reasons; rename later when convenient.
 
+## Multiverse Testing (Agent Alignment & Dogfooding)
+
+- **The Builder-User Dualism**: We are building Anchor (a persistent memory MCP server for coding agents), and at the same time, we have configured the active coding agent (you/Antigravity) with Anchor itself!
+- **Testing & Feedback**: As the agent, you are both the developer building the product and the dogfooding client testing it. Proactively use the memory tools (`memory_recall`, `memory_remember`, `memory_supersede`, `memory_list`) during development to:
+  - Retrieve the current project state when starting a session.
+  - Automatically persist key facts, design choices, and session episodes without the user having to explicitly ask you to.
+  - Offer constructive critique of how the tools behave from a client's perspective to improve developer ergonomics.
+
 ## Architecture (one-screen)
 
 ```
