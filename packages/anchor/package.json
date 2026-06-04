@@ -1,6 +1,6 @@
 {
   "name": "@anchormem/anchor",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Anchor — cross-agent memory for AI coding agents. Meta-package; installs the CLI and MCP server.",
   "keywords": [
     "mcp",
@@ -31,8 +31,8 @@
     "anchor-server": "bin/anchor-server.js"
   },
   "dependencies": {
-    "@anchormem/cli": "^0.1.4",
-    "@anchormem/server": "^0.1.4"
+    "@anchormem/cli": "^0.1.5",
+    "@anchormem/server": "^0.1.5"
   },
   "engines": {
     "node": ">=20"
