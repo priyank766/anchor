@@ -16,6 +16,7 @@ ${c.bold("Usage")}
   ${c.cyan("anchor")}                       Open the interactive memory console
   ${c.cyan("anchor browse")} [--scope X]    Same as above
   ${c.cyan("anchor init")}                  Initialize Anchor + auto-register in all detected tools
+  ${c.cyan("anchor update")}                Register/update Anchor MCP configuration in all detected tools
   ${c.cyan("anchor setup")} [--cursor] [--all]
                                 Generate project-level MCP configs for terminal coding CLIs
                                 (--cursor to add Cursor, --all for all tools)
@@ -105,6 +106,48 @@ async function main() {
         process.stdout.write(c.dim("No new tools configured. Run 'anchor doctor' to check status.\n"));
       }
       process.stdout.write(c.dim(`\nTip: run ${c.cyan("anchor setup")} to generate project-level configs for team sharing.\n`));
+      return;
+    }
+
+    case "update": {
+      process.stdout.write(banner());
+      process.stdout.write(c.bold("Registering/updating MCP server in detected tools…\n\n"));
+      let registered = 0;
+      for (const tool of TOOLS) {
+        const detected = tool.detect();
+        if (!detected) {
+          process.stdout.write(c.dim(`  – ${tool.name.padEnd(18)} not detected\n`));
+          continue;
+        }
+        const configPath = tool.globalConfigPath();
+        if (!configPath) {
+          process.stdout.write(c.dim(`  – ${tool.name.padEnd(18)} no global config path\n`));
+          continue;
+        }
+        const result = writeMcpEntry(configPath, ANCHOR_SERVER_KEY, ANCHOR_MCP_ENTRY, tool.format);
+        switch (result.status) {
+          case "created":
+          case "merged":
+            process.stdout.write(ok(`${tool.name.padEnd(18)} registered ${c.green("✓")}\n`));
+            registered++;
+            break;
+          case "skipped":
+            process.stdout.write(c.dim(`  – ${tool.name.padEnd(18)} already configured\n`));
+            break;
+          case "error":
+            process.stdout.write(warn(`${tool.name.padEnd(18)} ${result.error ?? "failed"}\n`));
+            break;
+        }
+      }
+
+      process.stdout.write("\n");
+      if (registered > 0) {
+        process.stdout.write(
+          ok(`Updated/registered in ${c.bold(String(registered))} tool${registered === 1 ? "" : "s"}. You're all set!\n`),
+        );
+      } else {
+        process.stdout.write(c.dim("No new tools configured.\n"));
+      }
       return;
     }
 

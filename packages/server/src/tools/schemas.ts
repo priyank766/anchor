@@ -54,3 +54,7 @@ export const ContextInput = z.object({
   depth: z.number().int().positive().max(5).optional(),
 });
 
+export const UpdateInput = z.object({
+  scope: z.string().optional(),
+});
+

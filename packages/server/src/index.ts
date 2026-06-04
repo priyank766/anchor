@@ -16,6 +16,7 @@ import { handleList } from "./tools/list.js";
 import { handleSupersede } from "./tools/supersede.js";
 import { handleSummary } from "./tools/summary.js";
 import { handleContext } from "./tools/context.js";
+import { handleUpdate } from "./tools/update.js";
 import { startHttpServer } from "./http.js";
 
 
@@ -131,6 +132,20 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "memory_update",
+    description:
+      "Update and register the Anchor MCP server configuration in all detected local coding tools (Claude Code, Cursor, Codex, Windsurf, Cline, Antigravity, etc.). Optionally setup project-scoped files if scope is provided.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: {
+          type: "string",
+          description: "Project scope directory path to also generate project-level configs.",
+        },
+      },
+    },
+  },
 ];
 
 // Detect transport mode from env or CLI args.
@@ -218,6 +233,9 @@ To ensure alignment and avoid repetitive questions, you must follow these guidel
           break;
         case "memory_context":
           result = handleContext(store, args ?? {});
+          break;
+        case "memory_update":
+          result = handleUpdate(store, args ?? {});
           break;
         default:
           throw new Error(`Unknown tool: ${name}`);
