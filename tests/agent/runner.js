@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
@@ -374,6 +374,128 @@ console.log(`  MCP Tool Call Errors: ${c.bold}${callErrors}${c.reset}`);
 console.log(`  Schema Compliant:     ${c.bold}${schemaCompliantMessages}${c.reset}`);
 console.log(`  Schema Violations:    ${c.bold}${schemaViolations.length}${c.reset}`);
 console.log(`  Scope Isolation Safe: ${c.bold}${scopeIsolationVerified ? "YES" : "NO"}${c.reset}`);
+
+// --- Step 5b: Verify memory_summary and memory_context ---------------------
+const realServerPath = resolve(WORKSPACE_DIR, "packages", "server", "dist", "index.js");
+await testNewToolsIntegration(realServerPath, ANCHOR_HOME, DB_PATH, SANDBOX_DIR);
+
+async function testNewToolsIntegration(serverPath, anchorHome, dbPath, sandboxDir) {
+  console.log(`\n${c.bold}[5b/6] Validating new memory_summary and memory_context tools over JSON-RPC...${c.reset}`);
+  return new Promise((resolve) => {
+    const child = spawn("node", [serverPath], {
+      env: {
+        ...process.env,
+        ANCHOR_HOME: anchorHome,
+      },
+      stdio: ["pipe", "pipe", "inherit"],
+    });
+
+    let buffer = "";
+    const responses = [];
+
+    child.stdout.on("data", (chunk) => {
+      buffer += chunk.toString("utf8");
+      let newlineIndex;
+      while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+        if (line.length > 0) {
+          try {
+            responses.push(JSON.parse(line));
+            handleNextRequest();
+          } catch (e) {
+            console.error("Failed to parse server JSON-RPC response:", line);
+          }
+        }
+      }
+    });
+
+    let currentStep = 0;
+
+    function sendRequest(req) {
+      child.stdin.write(JSON.stringify(req) + "\n");
+    }
+
+    function handleNextRequest() {
+      if (currentStep === 0) {
+        currentStep = 1;
+        sendRequest({
+          jsonrpc: "2.0",
+          method: "notifications/initialized"
+        });
+        sendRequest({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: {
+            name: "memory_summary",
+            arguments: {
+              scope: sandboxDir
+            }
+          }
+        });
+      } else if (currentStep === 1) {
+        currentStep = 2;
+        sendRequest({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: {
+            name: "memory_context",
+            arguments: {
+              scope: sandboxDir,
+              depth: 2
+            }
+          }
+        });
+      } else if (currentStep === 2) {
+        child.stdin.end();
+      }
+    }
+
+    child.on("close", () => {
+      const logFile = join(LOG_DIR, "mcp_tools_output.log");
+      let logContent = "=== MCP memory_summary AND memory_context INTEGRATION OUTPUT ===\n\n";
+
+      const summaryRes = responses.find(r => r.id === 1);
+      const contextRes = responses.find(r => r.id === 2);
+
+      if (summaryRes && summaryRes.result && summaryRes.result.content) {
+        logContent += "--- memory_summary Result ---\n";
+        logContent += summaryRes.result.content[0].text + "\n\n";
+      } else {
+        logContent += "--- memory_summary Result ---\nERROR: No valid response returned\n\n";
+      }
+
+      if (contextRes && contextRes.result && contextRes.result.content) {
+        logContent += "--- memory_context Result ---\n";
+        try {
+          const parsedResult = JSON.parse(contextRes.result.content[0].text);
+          logContent += parsedResult.context + "\n";
+        } catch {
+          logContent += contextRes.result.content[0].text + "\n";
+        }
+      } else {
+        logContent += "--- memory_context Result ---\nERROR: No valid response returned\n\n";
+      }
+
+      writeFileSync(logFile, logContent, "utf8");
+      console.log(`  ${c.green}✓${c.reset} New tools verified. Output dumped to ${logFile}`);
+      resolve();
+    });
+
+    sendRequest({
+      jsonrpc: "2.0",
+      id: 0,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-11-25",
+        capabilities: {},
+        clientInfo: { name: "integration-test-runner", version: "1.0.0" }
+      }
+    });
+  });
+}
 
 // --- Step 6: Generate Performance & Metrics Report -------------------------
 console.log(`\n${c.bold}[6/6] Generating comprehensive results report...${c.reset}`);
