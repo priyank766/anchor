@@ -14,7 +14,10 @@ import { handleRecall } from "./tools/recall.js";
 import { handleForget } from "./tools/forget.js";
 import { handleList } from "./tools/list.js";
 import { handleSupersede } from "./tools/supersede.js";
+import { handleSummary } from "./tools/summary.js";
+import { handleContext } from "./tools/context.js";
 import { startHttpServer } from "./http.js";
+
 
 const TOOLS = [
   {
@@ -94,6 +97,38 @@ const TOOLS = [
         sessionId: { type: "string" },
       },
       required: ["oldId", "content"],
+    },
+  },
+  {
+    name: "memory_summary",
+    description:
+      "Retrieve a structured summary of all stored memories (facts, decisions, episodes, and artifacts) for a scope to understand existing context and rules.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: {
+          type: "string",
+          description: "Project scope. Defaults to global. Pass a path or project name to isolate.",
+        },
+      },
+    },
+  },
+  {
+    name: "memory_context",
+    description:
+      "Retrieve codebase context (file tree, git branch, commits, status) if the scope represents a local directory.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: {
+          type: "string",
+          description: "Project scope directory path. Defaults to current workspace root.",
+        },
+        depth: {
+          type: "number",
+          description: "Max folder depth to traverse for the file tree. Default 2, max 5.",
+        },
+      },
     },
   },
 ];
@@ -177,6 +212,12 @@ To ensure alignment and avoid repetitive questions, you must follow these guidel
           break;
         case "memory_supersede":
           result = handleSupersede(store, args ?? {});
+          break;
+        case "memory_summary":
+          result = handleSummary(store, args ?? {});
+          break;
+        case "memory_context":
+          result = handleContext(store, args ?? {});
           break;
         default:
           throw new Error(`Unknown tool: ${name}`);

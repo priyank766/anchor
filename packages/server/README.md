@@ -2,7 +2,7 @@
 
 The MCP server for [Anchor](https://github.com/priyank766/anchor) — local-first cross-agent memory for AI coding agents.
 
-This package is the runtime where memory lives. It exposes five tools (`memory_recall`, `memory_remember`, `memory_supersede`, `memory_forget`, `memory_list`) over the [Model Context Protocol](https://modelcontextprotocol.io) so any compatible agent can read and write a single, durable memory of your project.
+This package is the runtime where memory lives. It exposes seven tools (`memory_recall`, `memory_remember`, `memory_supersede`, `memory_forget`, `memory_list`, `memory_summary`, `memory_context`) over the [Model Context Protocol](https://modelcontextprotocol.io) so any compatible agent can read and write a single, durable memory of your project.
 
 Most users do not install this package directly. Install [`@anchormem/anchor`](https://www.npmjs.com/package/@anchormem/anchor) instead — it installs both the server and the CLI in one step.
 

@@ -47,7 +47,7 @@ flowchart TB
     end
 
     subgraph "Anchor MCP Server (Node 20+, TypeScript)"
-        T[memory_recall · memory_remember · memory_supersede · memory_forget · memory_list]
+        T[memory_recall · memory_remember · memory_supersede · memory_forget · memory_list · memory_summary · memory_context]
         R[Retrieval: BM25 FTS5 + optional vector hybrid → typed rerank → token-budgeted gist]
         C[Capture: secret redaction · injection scrub · scope isolation]
         T --> R

@@ -154,7 +154,7 @@ try {
     store.insertEpisode({
       scopeId: scopeRef.id,
       sourceId,
-      content: "Created a transparent standard streams proxy to intercept and validate JSON-RPC packets in real time.",
+      summary: "Created a transparent standard streams proxy to intercept and validate JSON-RPC packets in real time.",
     });
   }
   store.close();
@@ -360,12 +360,9 @@ try {
   });
   // Querying with an unrelated out-of-scope project path
   const unrelatedScopeRef = store.resolveScope("C:\\unrelated\\path\\to\\project");
-  const searchResult = store.recall({
-    scopeId: unrelatedScopeRef.id,
-    query: "gateway API port",
-  });
-  // Isolation passes if out-of-scope recall returns 0 context matches
-  scopeIsolationVerified = searchResult.facts.length === 0 && searchResult.decisions.length === 0;
+  const searchResults = store.searchFTS(unrelatedScopeRef.id, "gateway API port", 50);
+  // Isolation passes if out-of-scope FTS search returns 0 context matches
+  scopeIsolationVerified = searchResults.length === 0;
   store.close();
 } catch (err) {
   schemaViolations.push(`Scope isolation negative test error: ${err.message}`);

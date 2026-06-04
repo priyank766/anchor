@@ -39,7 +39,7 @@ Agents (Claude Code, Codex, Cursor, …)
    │ MCP (stdio)            │ Skill (SKILL.md)
    ▼                        ▼
 Anchor MCP Server (TypeScript, Node 20+)
-   ├ tools: memory_recall / memory_remember / memory_forget / memory_list
+   ├ tools: memory_recall / memory_remember / memory_forget / memory_list / memory_supersede / memory_summary / memory_context
    ├ retrieval: SQLite FTS5 (BM25)  →  rerank by type/recency  →  token-budgeted gist
    ├ capture: redact-at-write (secrets stripped before storage)
    └ store: SQLite at ~/.anchor/memory.db

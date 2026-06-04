@@ -44,3 +44,13 @@ export const ListInput = z.object({
 export const ScopeInput = z.object({
   path: z.string().min(1),
 });
+
+export const SummaryInput = z.object({
+  scope: z.string().optional(),
+});
+
+export const ContextInput = z.object({
+  scope: z.string().optional(),
+  depth: z.number().int().positive().max(5).optional(),
+});
+
