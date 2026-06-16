@@ -1,6 +1,5 @@
 name: Publish to npm
 
-# Publish on version tag push (e.g. v0.0.2)
 on:
   push:
     tags:
@@ -8,18 +7,28 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  id-token: write  # Required for npm provenance
+  contents: write   # Needed for creating GitHub Releases
+  id-token: write   # Required for npm provenance attestation
 
 jobs:
+  # ── Gate: run full CI first ─────────────────────────────────
+  ci:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  # ── Publish all packages ────────────────────────────────────
   publish:
+    needs: ci
     runs-on: ubuntu-latest
     environment: npm-publish
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: "https://registry.npmjs.org"
@@ -29,7 +38,6 @@ jobs:
         run: npm ci
 
       # Server MUST build first — CLI imports from @anchormem/server
-      # and needs the .d.ts files to exist at compile time.
       - name: Build server
         run: npm run build
         working-directory: packages/server
@@ -38,25 +46,95 @@ jobs:
         run: npm run build
         working-directory: packages/cli
 
-      - name: Run tests
-        run: |
-          cd packages/server && npx vitest run && cd ../..
-          cd packages/cli && npx vitest run && cd ../..
+      # ── Publish in dependency order: server → cli → anchor ──
+      # Each step checks if the version is already on the registry
+      # to make the workflow idempotent (safe to re-run).
 
       - name: Publish @anchormem/server
-        run: npm publish --access public --provenance
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED=$(npm view "${PKG_NAME}@${PKG_VERSION}" version 2>/dev/null || echo "")
+          if [ "$PUBLISHED" = "$PKG_VERSION" ]; then
+            echo "⏭️  ${PKG_NAME}@${PKG_VERSION} already published — skipping"
+          else
+            echo "📦 Publishing ${PKG_NAME}@${PKG_VERSION}..."
+            npm publish --access public --provenance
+          fi
         working-directory: packages/server
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @anchormem/cli
-        run: npm publish --access public --provenance
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED=$(npm view "${PKG_NAME}@${PKG_VERSION}" version 2>/dev/null || echo "")
+          if [ "$PUBLISHED" = "$PKG_VERSION" ]; then
+            echo "⏭️  ${PKG_NAME}@${PKG_VERSION} already published — skipping"
+          else
+            echo "📦 Publishing ${PKG_NAME}@${PKG_VERSION}..."
+            npm publish --access public --provenance
+          fi
         working-directory: packages/cli
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @anchormem/anchor
-        run: npm publish --access public --provenance
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED=$(npm view "${PKG_NAME}@${PKG_VERSION}" version 2>/dev/null || echo "")
+          if [ "$PUBLISHED" = "$PKG_VERSION" ]; then
+            echo "⏭️  ${PKG_NAME}@${PKG_VERSION} already published — skipping"
+          else
+            echo "📦 Publishing ${PKG_NAME}@${PKG_VERSION}..."
+            npm publish --access public --provenance
+          fi
         working-directory: packages/anchor
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ── Create GitHub Release ───────────────────────────────────
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for release notes
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const version = tag.replace('v', '');
+
+            // Auto-generate release notes from commits since last tag
+            let notes = `## What's Changed\n\n`;
+            notes += `**npm**: \`npx @anchormem/anchor@${version}\`\n\n`;
+            notes += `### Packages\n`;
+            notes += `| Package | Version |\n|---------|--------|\n`;
+            notes += `| \`@anchormem/server\` | ${version} |\n`;
+            notes += `| \`@anchormem/cli\` | ${version} |\n`;
+            notes += `| \`@anchormem/anchor\` | ${version} |\n`;
+
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `Anchor ${tag}`,
+              body: notes,
+              draft: false,
+              prerelease: version.includes('-'),
+              generate_release_notes: true,
+            });
