@@ -2,6 +2,7 @@
   "name": "anchor",
   "version": "0.1.5",
   "private": true,
+  "type": "module",
   "description": "Cross-agent memory layer. Local-first MCP server + open Skill so any agent (Claude Code, Codex, Cursor, Cline, Antigravity, ...) shares context.",
   "workspaces": [
     "packages/*"

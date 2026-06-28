@@ -52,3 +52,6 @@ jobs:
       - name: Test CLI
         run: npx vitest run
         working-directory: packages/cli
+
+      - name: Run offline benchmark (cold-vs-warm)
+        run: node tests/eval/run.mjs
