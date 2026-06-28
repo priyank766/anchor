@@ -20,13 +20,13 @@ jobs:
       pages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
 
       - name: Setup Pages
-        uses: actions/configure-pages@983d63b72ee224c811402607b1500dae8c7aacb7 # v5.0.0
+        uses: actions/configure-pages@v5
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dde9d49af840 # v3.0.1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: "site"
 
@@ -42,4 +42,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@d6db90164ad5ed86f2b6a608d11ef05e9c0db084 # v4.0.5
+        uses: actions/deploy-pages@v4
