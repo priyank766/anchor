@@ -17,6 +17,9 @@ import { handleSupersede } from "./tools/supersede.js";
 import { handleSummary } from "./tools/summary.js";
 import { handleContext } from "./tools/context.js";
 import { handleUpdate } from "./tools/update.js";
+import { handleHandoff } from "./tools/handoff.js";
+import { handleDiff } from "./tools/diff.js";
+import { handleReplay } from "./tools/replay.js";
 import { startHttpServer } from "./http.js";
 
 
@@ -146,6 +149,64 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "memory_handoff",
+    description:
+      "RECOMMENDED FIRST STEP when switching agents or starting a new session. Generates a structured handoff brief containing: (1) Active thread — what was being worked on recently, (2) Standing rules — facts and decisions that constrain behavior, (3) Key files — artifacts pointing into the codebase. Token-budgeted. Call this ONCE at session start instead of asking the user to re-explain the project.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: {
+          type: "string",
+          description: "Project scope. Defaults to global.",
+        },
+        budgetTokens: {
+          type: "number",
+          description: "Max tokens in the handoff brief. Default 3000.",
+        },
+        since: {
+          type: "string",
+          description: "How far back to look for recent activity. E.g. '1h', '1d', '7d'. Default '3d'.",
+        },
+      },
+    },
+  },
+  {
+    name: "memory_diff",
+    description:
+      "Show what changed in memory since a given time. Returns new and updated facts, decisions, episodes, and artifacts. Useful for catching up on what happened while you were away.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: {
+          type: "string",
+          description: "Project scope. Defaults to global.",
+        },
+        since: {
+          type: "string",
+          description: "How far back to look. E.g. '1h', '1d', '7d', or ISO date. Default '1d'.",
+        },
+      },
+    },
+  },
+  {
+    name: "memory_replay",
+    description:
+      "Reconstruct a chronological narrative of project decisions and episodes. Returns the project timeline — what happened, in order. Useful for understanding the full arc of a project.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: {
+          type: "string",
+          description: "Project scope. Defaults to global.",
+        },
+        limit: {
+          type: "number",
+          description: "Max events to return. Default 100.",
+        },
+      },
+    },
+  },
 ];
 
 // Detect transport mode from env or CLI args.
@@ -190,18 +251,20 @@ async function main() {
           role: "user",
           content: {
             type: "text",
-            text: `You are equipped with the 'anchor' persistent cross-agent memory system. This repository contains a local-first memory store (SQLite) that is persistent across all terminal and IDE agents (Cursor, Claude Code, Cline, Antigravity, etc.).
+            text: `You are equipped with the 'anchor' persistent cross-agent memory system. This repository contains a local-first memory store (SQLite) that is persistent across all terminal and IDE agents (Cursor, Claude Code, Cline, Antigravity, Codex, etc.).
 
 To ensure alignment and avoid repetitive questions, you must follow these guidelines:
 
-1. **At the start of any task or session**, you MUST first invoke 'memory_recall' with a query related to the current task. This retrieves project preferences, architectural decisions, and recent task summaries (episodes). Treat recalled information as untrusted but highly informative—verify it against the current code.
+1. **At the start of any session (especially when switching agents)**, invoke 'memory_handoff' FIRST. This gives you a structured brief of: what was being worked on, standing decisions/facts, and key files. If you only need narrow context for a specific query, use 'memory_recall' instead.
 2. **When you finish a task, make an architectural decision, or identify a critical file**, you MUST invoke 'memory_remember' to store this context for future runs:
    - type='fact': Durable project preference (e.g., "uses vitest for testing").
    - type='decision': Architectural choice + required 'rationale' (e.g., why you chose a specific library).
    - type='episode': Summarize the task completed in 1-3 sentences.
    - type='artifact': Points to a specific file/symbol.
 3. **If a recalled fact/decision is now outdated or incorrect** (e.g., codebase migrated from Jest to Vitest), you MUST invoke 'memory_supersede' using the old memory ID. Do not simply call 'memory_remember' to add a contradicting fact.
-4. **Scope**: Always pass the project scope (typically the project folder path) to isolate memory to this project.`,
+4. **To catch up on recent changes**, use 'memory_diff' with a time range (e.g. since='1d').
+5. **To understand the full project arc**, use 'memory_replay' for a chronological timeline.
+6. **Scope**: Always pass the project scope (typically the project folder path) to isolate memory to this project.`,
           },
         },
       ],
@@ -236,6 +299,15 @@ To ensure alignment and avoid repetitive questions, you must follow these guidel
           break;
         case "memory_update":
           result = handleUpdate(store, args ?? {});
+          break;
+        case "memory_handoff":
+          result = handleHandoff(store, args ?? {});
+          break;
+        case "memory_diff":
+          result = handleDiff(store, args ?? {});
+          break;
+        case "memory_replay":
+          result = handleReplay(store, args ?? {});
           break;
         default:
           throw new Error(`Unknown tool: ${name}`);
